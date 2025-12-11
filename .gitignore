@@ -27,3 +27,7 @@ vendor/
 .DS_Store
 Thumbs.db
 
+# Air (hot reload)
+tmp/
+build-errors.log
+

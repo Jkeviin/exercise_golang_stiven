@@ -17,6 +17,26 @@ curl http://localhost:8080/ping
 curl http://localhost:8080/users/1
 ```
 
+## 🔥 Desarrollo con Hot Reload
+
+Para no tener que reiniciar el servidor en cada cambio, usa **Air**:
+
+```bash
+# 1. Instalar Air (solo una vez)
+go install github.com/air-verse/air@latest
+
+# 2. Ejecutar con hot reload
+air
+# O usando Make:
+make dev
+```
+
+**Con Air**:
+- ✅ Reinicio automático al guardar cambios
+- ✅ No necesitas detener/iniciar el servidor
+- ✅ Compilación rápida
+- ✅ Logs en colores
+
 ## 🧪 Tests
 
 ```bash
@@ -26,6 +46,7 @@ go test ./...  -v
 ## 📚 Documentación
 
 - **[ARQUITECTURA.md](ARQUITECTURA.md)** - Explicación detallada de cómo está construido el proyecto, responsabilidad de cada carpeta según DDD y Clean Architecture
+- **[HOT_RELOAD.md](docs/HOT_RELOAD.md)** - 🔥 Guía de hot reload con Air (recarga automática sin reiniciar)
 - **[WORKSHOP.md](docs/WORKSHOP.md)** - Ejercicios prácticos paso a paso para aprender
 - **[README_POSTMAN.md](README_POSTMAN.md)** - Guía para usar la colección de Postman
 
@@ -140,7 +161,8 @@ EXTERNAL_API_URL=https://jsonplaceholder.typicode.com
 
 ```bash
 make deps     # Instalar dependencias
-make run      # Ejecutar servidor
+make dev      # 🔥 Ejecutar con hot reload (recomendado para desarrollo)
+make run      # Ejecutar servidor (sin hot reload)
 make test     # Ejecutar tests
 make build    # Compilar ejecutable
 ```
