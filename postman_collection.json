@@ -1,0 +1,213 @@
+{
+	"info": {
+		"_postman_id": "ejercicio-api-collection",
+		"name": "Ejercicio API - Clean Architecture",
+		"description": "Colección de endpoints para la API de ejercicio con Clean Architecture",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Status",
+			"item": [
+				{
+					"name": "Get Server Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/status",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"status"
+							]
+						},
+						"description": "Obtiene el estado actual del servidor incluyendo versión y uptime"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Health Check",
+			"item": [
+				{
+					"name": "Ping",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/ping",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"ping"
+							]
+						},
+						"description": "Health check simple del servidor"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Users",
+			"item": [
+				{
+					"name": "Get User by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/users/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1",
+									"description": "ID del usuario (1-10)"
+								}
+							]
+						},
+						"description": "Obtiene un usuario por su ID desde la API externa JSONPlaceholder"
+					},
+					"response": []
+				},
+				{
+					"name": "Get User by ID - Example 2",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/users/2",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users",
+								"2"
+							]
+						},
+						"description": "Ejemplo con ID 2"
+					},
+					"response": []
+				},
+				{
+					"name": "Get User by ID - Example 5",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/users/5",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users",
+								"5"
+							]
+						},
+						"description": "Ejemplo con ID 5"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Error Cases",
+			"item": [
+				{
+					"name": "User - Invalid ID (0)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/users/0",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users",
+								"0"
+							]
+						},
+						"description": "Prueba validación: ID debe ser mayor que 0"
+					},
+					"response": []
+				},
+				{
+					"name": "User - Invalid ID (negative)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/users/-1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users",
+								"-1"
+							]
+						},
+						"description": "Prueba validación: ID negativo"
+					},
+					"response": []
+				},
+				{
+					"name": "User - Invalid ID (too large)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/users/999",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users",
+								"999"
+							]
+						},
+						"description": "Prueba validación: ID muy grande (si implementas límite superior)"
+					},
+					"response": []
+				},
+				{
+					"name": "User - Invalid ID (not a number)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/users/abc",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users",
+								"abc"
+							]
+						},
+						"description": "Prueba validación: ID no es un número"
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8080",
+			"type": "string"
+		}
+	]
+}
