@@ -4,6 +4,8 @@ Proyecto educativo para aprender Clean Architecture y DDD desde cero.
 
 ## ⚡ Inicio Rápido
 
+### Mac/Linux:
+
 ```bash
 # Instalar dependencias
 go mod tidy
@@ -16,6 +18,21 @@ curl http://localhost:8080/status
 curl http://localhost:8080/ping
 curl http://localhost:8080/users/1
 ```
+
+### Windows:
+
+```cmd
+REM Instalar dependencias
+scripts\deps.bat
+
+REM Ejecutar servidor
+scripts\run.bat
+
+REM O ejecutar con hot reload
+scripts\dev.bat
+```
+
+> **💡 Nota para Windows**: `make` no funciona por defecto. Usa los scripts `.bat` en la carpeta `scripts/`. Ver [Guía Windows](docs/WINDOWS.md).
 
 ## 🔥 Desarrollo con Hot Reload
 
@@ -46,6 +63,7 @@ go test ./...  -v
 ## 📚 Documentación
 
 - **[ARQUITECTURA.md](ARQUITECTURA.md)** - Explicación detallada de cómo está construido el proyecto, responsabilidad de cada carpeta según DDD y Clean Architecture
+- **[WINDOWS.md](docs/WINDOWS.md)** - 🪟 Guía completa para usar el proyecto en Windows (scripts .bat, make alternativo)
 - **[HOT_RELOAD.md](docs/HOT_RELOAD.md)** - 🔥 Guía de hot reload con Air (recarga automática sin reiniciar)
 - **[WORKSHOP.md](docs/WORKSHOP.md)** - Ejercicios prácticos paso a paso para aprender
 - **[README_POSTMAN.md](README_POSTMAN.md)** - Guía para usar la colección de Postman
@@ -159,12 +177,25 @@ EXTERNAL_API_URL=https://jsonplaceholder.typicode.com
 
 ## 🔧 Comandos
 
+### Mac/Linux (con Make):
+
 ```bash
 make deps     # Instalar dependencias
 make dev      # 🔥 Ejecutar con hot reload (recomendado para desarrollo)
 make run      # Ejecutar servidor (sin hot reload)
 make test     # Ejecutar tests
 make build    # Compilar ejecutable
+```
+
+### Windows (scripts .bat):
+
+```cmd
+scripts\deps.bat      # Instalar dependencias
+scripts\dev.bat       # 🔥 Ejecutar con hot reload
+scripts\run.bat       # Ejecutar servidor (sin hot reload)
+scripts\test.bat      # Ejecutar tests
+scripts\build.bat     # Compilar ejecutable
+scripts\help.bat      # Ver ayuda
 ```
 
 ## 🌟 Características Destacadas

@@ -494,3 +494,4 @@ Esta arquitectura puede parecer "mucha carpeta" para un proyecto simple, pero:
 ✅ **Es educativa**: Aprendes patrones que aplican a cualquier lenguaje
 
 **La clave**: Respetar el flujo de dependencias (siempre hacia el dominio) y no mezclar responsabilidades.
+
