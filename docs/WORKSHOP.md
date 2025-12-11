@@ -2,7 +2,7 @@
 
 Este taller te guiará para agregar nuevas funcionalidades a la API paso a paso.
 
-**Importante**: Cada ejercicio explica QUÉ necesitas agregar, no CÓMO programarlo.
+**Importante**: Cada ejercicio explica QUÉ necesitas agregar desde la perspectiva de negocio.
 
 ---
 
@@ -29,106 +29,202 @@ Si todo funciona, ¡estás listo para empezar! 🎉
 
 ---
 
-## EJERCICIO 1 - Cambiar el mensaje de respuesta de ping
+## EJERCICIO 1 - Cambiar el mensaje de bienvenida del ping
 
-### 📋 QUÉ QUEREMOS
+### 📋 LO QUE NECESITAMOS
 
-El endpoint `/ping` actualmente responde con `{"message":"pong"}`. Queremos que responda con `{"message":"¡Servidor activo!"}`.
+El cliente dice que cuando alguien llame al endpoint `/ping`, el mensaje actual `"pong"` no es claro. Necesitamos que diga `"API funcionando correctamente"` para que sea más descriptivo.
 
-### 🎯 PASOS DETALLADOS
+### 🎯 INSTRUCCIONES
 
-1. **Encuentra el archivo donde se define qué responde el endpoint ping**
-   - Busca en la carpeta `internal/usecase/ping/`
-   - Abre el archivo que tiene el nombre relacionado con "ping"
-   - Dentro verás una línea que dice `Message: "pong"`
+1. **Ubica donde está definido el mensaje del ping**
+   - Ve a la carpeta: `internal/usecase/ping/`
+   - Abre el archivo que contiene el texto `"pong"`
 
-2. **Cambia el mensaje**
-   - Reemplaza el texto `"pong"` por `"¡Servidor activo!"`
-   - Guarda el archivo
+2. **Cambia el texto**
+   - Donde dice `"pong"`, cámbialo por `"API funcionando correctamente"`
 
-3. **Prueba el cambio**
-   - Detén el servidor (presiona Ctrl+C en la terminal donde está corriendo)
-   - Vuelve a iniciar el servidor: `go run cmd/app/main.go`
-   - En otra terminal ejecuta: `curl http://localhost:8080/ping`
-   - Deberías ver: `{"message":"¡Servidor activo!"}`
+3. **Verifica el cambio**
+   - Detén el servidor (Ctrl+C en la terminal)
+   - Vuelve a iniciarlo: `go run cmd/app/main.go`
+   - En otra terminal prueba: `curl http://localhost:8080/ping`
+   - Ahora debe mostrar: `{"message":"API funcionando correctamente"}`
 
-### ✅ VERIFICACIÓN
+### ✅ RESULTADO ESPERADO
 
-- ✅ El endpoint `/ping` ahora responde con el nuevo mensaje
-- ✅ El endpoint `/status` sigue funcionando igual
-- ✅ El endpoint `/users/1` sigue funcionando igual
+Antes: `{"message":"pong"}`
+Ahora: `{"message":"API funcionando correctamente"}`
 
-### 💡 QUÉ APRENDISTE
+### 💡 LO QUE HICISTE
 
-Has modificado la respuesta de un endpoint cambiando el mensaje en el caso de uso.
+Modificaste el mensaje de respuesta de un endpoint para que sea más claro para los usuarios.
 
 ---
 
-## EJERCICIO 2 - Cambiar la versión de la aplicación
+## EJERCICIO 2 - Cambiar el número de versión
 
-### 📋 QUÉ QUEREMOS
+### 📋 LO QUE NECESITAMOS
 
-El endpoint `/status` muestra `"version":"1.0.0"`. Queremos cambiarla a `"version":"1.1.0"` porque hicimos mejoras.
+Acabamos de hacer una mejora en la aplicación. El equipo de producto solicita que actualicemos el número de versión que muestra el endpoint `/status` de `"1.0.0"` a `"1.1.0"`.
 
-### 🎯 PASOS DETALLADOS
+### 🎯 INSTRUCCIONES
 
-1. **Encuentra el archivo donde se define la versión**
-   - Busca en la carpeta `internal/usecase/status/`
-   - Abre el archivo relacionado con "status"
-   - Busca la línea que dice `Version: "1.0.0"`
+1. **Ubica donde está definida la versión**
+   - Ve a la carpeta: `internal/usecase/status/`
+   - Busca donde dice `Version: "1.0.0"`
 
-2. **Cambia la versión**
-   - Reemplaza `"1.0.0"` por `"1.1.0"`
-   - Guarda el archivo
+2. **Actualiza el número**
+   - Cambia `"1.0.0"` por `"1.1.0"`
 
-3. **Prueba el cambio**
+3. **Verifica el cambio**
    - Reinicia el servidor
    - Ejecuta: `curl http://localhost:8080/status`
-   - La respuesta debe mostrar `"version":"1.1.0"`
+   - El campo `version` debe mostrar `"1.1.0"`
 
-### ✅ VERIFICACIÓN
+### ✅ RESULTADO ESPERADO
 
-- ✅ El campo `version` ahora muestra `1.1.0`
-- ✅ Los demás campos siguen igual (`message`, `uptime`)
+El endpoint `/status` ahora muestra la versión `1.1.0`.
 
-### 💡 QUÉ APRENDISTE
+### 💡 LO QUE HICISTE
 
-Has modificado un dato que devuelve el endpoint cambiando el valor en el caso de uso.
+Actualizaste un valor que devuelve el endpoint para reflejar cambios en la aplicación.
 
 ---
 
-## EJERCICIO 3 - Agregar un nuevo campo al status
+## EJERCICIO 3 - Rechazar IDs de usuario negativos
 
-### 📋 QUÉ QUEREMOS
+### 📋 LO QUE NECESITAMOS
 
-El endpoint `/status` actualmente devuelve `message`, `version` y `uptime`. Queremos agregar un campo nuevo llamado `environment` que diga `"development"`.
+Un usuario reportó que puede llamar `/users/-5` y el servidor intenta buscar ese usuario. Necesitamos que cuando alguien envíe un ID negativo o cero, el servidor responda inmediatamente con un error que diga: "El ID debe ser un número positivo".
 
-### 🎯 PASOS DETALLADOS
+### 🎯 INSTRUCCIONES
 
-1. **Agrega el campo a la estructura de datos**
-   - Busca la carpeta `internal/domain/status/`
-   - Abre el archivo de la entidad Status
-   - Verás campos como `Message string`, `Version string`, `Uptime int64`
-   - Agrega un nuevo campo después de los existentes:
-     - Nombre del campo: `Environment`
-     - Tipo: `string`
-     - Tag JSON: `"environment"`
-   - El formato debe ser igual a los otros campos que ya existen
+1. **Ubica donde se recibe el ID del usuario**
+   - Ve a la carpeta: `internal/usecase/user/`
+   - Abre el archivo donde se procesa el ID
+   - Busca donde dice `if id <= 0`
 
-2. **Haz que el caso de uso devuelva el nuevo campo**
-   - Ve a `internal/usecase/status/`
-   - Abre el archivo del caso de uso
-   - Busca donde se crea el objeto Status (donde dice `Message: "..."`, `Version: "..."`, etc.)
-   - Agrega una nueva línea para el campo `Environment` con el valor `"development"`
+2. **Asegúrate que existe la validación**
+   - Debe haber una línea que verifica: `if id <= 0`
+   - Si existe, el trabajo ya está hecho
+   - Si no existe, agrégala con el mensaje: `"el ID debe ser mayor que 0"`
 
-3. **Prueba el cambio**
+3. **Prueba los casos**
+   - ID positivo: `curl http://localhost:8080/users/5` → Debe funcionar
+   - ID cero: `curl http://localhost:8080/users/0` → Debe dar error
+   - ID negativo: `curl http://localhost:8080/users/-1` → Debe dar error
+
+### ✅ RESULTADO ESPERADO
+
+- `/users/5` → ✅ Funciona (muestra el usuario)
+- `/users/0` → ❌ Error: "el ID debe ser mayor que 0"
+- `/users/-1` → ❌ Error: "el ID debe ser mayor que 0"
+
+### 💡 LO QUE HICISTE
+
+Agregaste una protección para que no se procesen IDs inválidos.
+
+---
+
+## EJERCICIO 4 - Limitar los IDs de usuario a un rango válido
+
+### 📋 LO QUE NECESITAMOS
+
+El API externa que usamos solo tiene usuarios del 1 al 10. Sin embargo, alguien puede llamar `/users/999` y el servidor intenta buscarlo, lo cual tarda tiempo y falla. 
+
+Necesitamos que si alguien pide un usuario con ID mayor a 10, el servidor responda inmediatamente con: "El ID debe estar entre 1 y 10".
+
+### 🎯 INSTRUCCIONES
+
+1. **Ubica la validación de IDs**
+   - En `internal/usecase/user/`
+   - Encuentra donde validas `if id <= 0`
+
+2. **Agrega una segunda validación**
+   - Después de validar que sea mayor que 0
+   - Agrega otra validación que verifique si el ID es mayor que 10
+   - El error debe decir: `"el ID debe estar entre 1 y 10"`
+
+3. **Prueba todos los casos**
+   - ID 5: `curl http://localhost:8080/users/5` → Debe funcionar
+   - ID 10: `curl http://localhost:8080/users/10` → Debe funcionar
+   - ID 11: `curl http://localhost:8080/users/11` → Debe dar error
+   - ID 999: `curl http://localhost:8080/users/999` → Debe dar error
+
+### ✅ RESULTADO ESPERADO
+
+- `/users/1` a `/users/10` → ✅ Funcionan
+- `/users/11` o mayor → ❌ Error: "el ID debe estar entre 1 y 10"
+- `/users/0` o negativo → ❌ Error: "el ID debe ser mayor que 0"
+
+### 💡 LO QUE HICISTE
+
+Definiste un rango válido de valores para evitar consultas innecesarias.
+
+---
+
+## EJERCICIO 5 - Rechazar IDs que no sean números
+
+### 📋 LO QUE NECESITAMOS
+
+Algunos usuarios intentan llamar `/users/abc` o `/users/hola`. El sistema debe responder inmediatamente con un error claro: "El ID debe ser un número válido".
+
+### 🎯 INSTRUCCIONES
+
+1. **Ubica donde se procesa el parámetro de la URL**
+   - Ve a la carpeta: `internal/adapter/http/handler/`
+   - Abre el archivo `user_handler.go`
+   - Busca donde se convierte el ID a número (función `Atoi`)
+
+2. **Verifica que se maneja el error**
+   - Ya debe haber código que maneja si la conversión falla
+   - Busca `if err != nil` después de la conversión
+   - El mensaje debe decir algo como "ID inválido"
+
+3. **Prueba los casos**
+   - ID válido: `curl http://localhost:8080/users/5` → Debe funcionar
+   - ID texto: `curl http://localhost:8080/users/abc` → Debe dar error
+   - ID especial: `curl http://localhost:8080/users/@#$` → Debe dar error
+
+### ✅ RESULTADO ESPERADO
+
+- `/users/5` → ✅ Funciona
+- `/users/abc` → ❌ Error: "ID inválido"
+- `/users/xyz123` → ❌ Error: "ID inválido"
+
+### 💡 LO QUE HICISTE
+
+Te aseguraste de que solo se procesen números válidos como IDs.
+
+---
+
+## EJERCICIO 6 - Agregar un campo de ambiente al status
+
+### 📋 LO QUE NECESITAMOS
+
+El equipo de operaciones necesita saber en qué ambiente está corriendo la aplicación. Queremos que el endpoint `/status` incluya un nuevo campo llamado `environment` que diga `"development"`.
+
+### 🎯 INSTRUCCIONES
+
+1. **Agrega el campo a la estructura**
+   - Ve a: `internal/domain/status/`
+   - Abre el archivo de Status
+   - Verás campos como `Message`, `Version`, `Uptime`
+   - Agrega un nuevo campo: `Environment` de tipo `string` con tag JSON `"environment"`
+
+2. **Haz que se devuelva el valor**
+   - Ve a: `internal/usecase/status/`
+   - Busca donde se crean los valores de Status
+   - Agrega: `Environment: "development"`
+
+3. **Verifica el cambio**
    - Reinicia el servidor
    - Ejecuta: `curl http://localhost:8080/status`
-   - Ahora deberías ver un campo adicional: `"environment":"development"`
+   - Debe aparecer: `"environment":"development"`
 
-### ✅ VERIFICACIÓN
+### ✅ RESULTADO ESPERADO
 
-La respuesta debe verse así:
+La respuesta incluye:
 ```json
 {
   "message": "...",
@@ -138,44 +234,37 @@ La respuesta debe verse así:
 }
 ```
 
-### 💡 QUÉ APRENDISTE
+### 💡 LO QUE HICISTE
 
-Para agregar un nuevo campo a una respuesta:
-1. Lo agregas a la estructura de datos (entidad)
-2. Lo llenas con un valor en el caso de uso
+Agregaste información adicional que el equipo necesita ver.
 
 ---
 
-## EJERCICIO 4 - Agregar timestamp al status
+## EJERCICIO 7 - Agregar fecha y hora al status
 
-### 📋 QUÉ QUEREMOS
+### 📋 LO QUE NECESITAMOS
 
-Queremos que el endpoint `/status` también devuelva la fecha y hora actual del servidor en un campo llamado `timestamp`.
+Para debugging, necesitamos que el endpoint `/status` también muestre la fecha y hora actual del servidor. Agrégala en un campo llamado `timestamp`.
 
-### 🎯 PASOS DETALLADOS
+### 🎯 INSTRUCCIONES
 
-1. **Agrega el campo timestamp a la entidad**
-   - Ve a `internal/domain/status/`
-   - En la estructura Status, agrega un nuevo campo:
-     - Nombre: `Timestamp`
-     - Tipo: `string`
-     - Tag JSON: `"timestamp"`
+1. **Agrega el campo timestamp**
+   - En `internal/domain/status/`
+   - Agrega campo: `Timestamp` de tipo `string` con tag JSON `"timestamp"`
 
-2. **Haz que el caso de uso genere el timestamp**
-   - Ve a `internal/usecase/status/`
-   - Busca donde se crea el objeto Status
-   - Agrega el campo `Timestamp` con el valor de la fecha/hora actual
-   - Usa el formato: `time.Now().Format(time.RFC3339)`
-   - **Nota**: Si ves error de "undefined: time", agrega `"time"` en los imports del archivo
+2. **Genera la fecha/hora actual**
+   - En `internal/usecase/status/`
+   - Donde creas el Status, agrega: `Timestamp: time.Now().Format(time.RFC3339)`
+   - Si marca error, agrega `"time"` en los imports del archivo
 
-3. **Prueba el cambio**
+3. **Verifica**
    - Reinicia el servidor
    - Ejecuta: `curl http://localhost:8080/status`
-   - Deberías ver un campo `timestamp` con formato: `"2025-12-11T14:30:45Z"`
+   - Debe aparecer algo como: `"timestamp":"2025-12-11T14:30:45Z"`
 
-### ✅ VERIFICACIÓN
+### ✅ RESULTADO ESPERADO
 
-La respuesta debe incluir:
+Ahora incluye la fecha/hora:
 ```json
 {
   "message": "...",
@@ -186,499 +275,337 @@ La respuesta debe incluir:
 }
 ```
 
-### 💡 QUÉ APRENDISTE
+### 💡 LO QUE HICISTE
 
-Puedes usar funciones del sistema (como obtener la hora actual) dentro de los casos de uso.
-
----
-
-## EJERCICIO 5 - Validar que el ID de usuario no sea mayor a 10
-
-### 📋 QUÉ QUEREMOS
-
-Actualmente puedes llamar `/users/999` y el servidor intenta buscar ese usuario. Queremos que si el ID es mayor a 10, el servidor responda con un error diciendo "El ID debe estar entre 1 y 10".
-
-### 🎯 PASOS DETALLADOS
-
-1. **Encuentra dónde está la validación actual del ID**
-   - Ve a `internal/usecase/user/`
-   - Abre el archivo del caso de uso de obtener usuario
-   - Busca la parte que valida `if id <= 0`
-   - Esa línea verifica que el ID sea positivo
-
-2. **Agrega la nueva validación**
-   - Después de la validación existente, agrega una nueva condición:
-   - Si el ID es mayor que 10, devuelve un error
-   - El mensaje debe ser: `"el ID debe estar entre 1 y 10"`
-   - Usa el mismo formato que la validación existente
-
-3. **Prueba la validación**
-   - Reinicia el servidor
-   - Prueba con ID válido: `curl http://localhost:8080/users/5`
-     - Debe funcionar normalmente
-   - Prueba con ID muy grande: `curl http://localhost:8080/users/999`
-     - Debe dar error con el mensaje que configuraste
-   - Prueba con ID 0: `curl http://localhost:8080/users/0`
-     - Debe dar el error original "el ID debe ser mayor que 0"
-
-### ✅ VERIFICACIÓN
-
-- ✅ `/users/1` a `/users/10` funcionan
-- ✅ `/users/11` o mayor da error "el ID debe estar entre 1 y 10"
-- ✅ `/users/0` o negativo da error "el ID debe ser mayor que 0"
-
-### 💡 QUÉ APRENDISTE
-
-Las validaciones de negocio (como rangos permitidos) se ponen en el caso de uso.
+Agregaste información temporal útil para monitoreo.
 
 ---
 
-## EJERCICIO 6 - Crear endpoint para listar todos los usuarios
+## EJERCICIO 8 - Mensaje específico cuando un usuario no existe
 
-### 📋 QUÉ QUEREMOS
+### 📋 LO QUE NECESITAMOS
 
-Tenemos el endpoint `/users/{id}` que devuelve un usuario. Queremos crear un nuevo endpoint `/users` (sin ID) que devuelva la lista de todos los usuarios.
+Cuando alguien pide un usuario que no existe (ejemplo: `/users/99`), el error actual no es claro. Necesitamos que cuando el servidor externo responda con error 404, nuestro sistema devuelva: "Usuario no encontrado".
 
-### 🎯 PASOS DETALLADOS
+### 🎯 INSTRUCCIONES
 
-#### PARTE A: Actualizar el repositorio
+1. **Ubica donde se llama al servidor externo**
+   - Ve a: `internal/adapter/repository/`
+   - Abre `user_api_repository.go`
+   - Busca donde se valida `resp.StatusCode`
 
-1. **Agrega el método a la interfaz del repositorio**
-   - Ve a `internal/domain/user/`
-   - Abre el archivo que define la interfaz `Repository`
-   - Actualmente tiene un método: `FindByID(id int) (*User, error)`
-   - Agrega un nuevo método debajo:
-     - Nombre: `FindAll`
-     - No recibe parámetros
-     - Devuelve: `([]*User, error)` (una lista de usuarios y posible error)
+2. **Agrega manejo específico para 404**
+   - Reemplaza la validación actual por una que detecte diferentes códigos:
+   - Si el código es 404: devolver error "usuario no encontrado"
+   - Si el código es 500 o mayor: devolver error "el servidor externo no está disponible"
+   - Para otros códigos: devolver "error inesperado del servidor"
 
-2. **Implementa el nuevo método en el repositorio**
-   - Ve a `internal/adapter/repository/`
-   - Abre el archivo que implementa el repositorio de usuarios
-   - Busca el método `FindByID` para ver cómo está hecho
-   - Crea un nuevo método `FindAll` usando el mismo patrón:
-     - URL: `{baseURL}/users` (sin el ID al final)
-     - Decodifica en un slice de usuarios: `var users []*user.User`
-     - Devuelve la lista
+3. **Prueba**
+   - Usuario válido: `curl http://localhost:8080/users/1` → Funciona
+   - Usuario inexistente: `curl http://localhost:8080/users/99` → Error claro
 
-#### PARTE B: Crear el caso de uso
+### ✅ RESULTADO ESPERADO
 
-3. **Crea un nuevo archivo para el caso de uso**
-   - En la carpeta `internal/usecase/user/`
-   - Crea un archivo nuevo llamado `list_users.go`
-   - Copia la estructura del archivo `get_user.go` pero:
-     - Cambia el nombre a `ListUsersUsecase`
-     - El método se llama `Execute()` (sin parámetros)
-     - Devuelve `([]*user.User, error)`
-     - Solo llama a `userRepo.FindAll()` sin validaciones
+- `/users/1` → ✅ Muestra el usuario
+- `/users/99` → ❌ "usuario no encontrado"
 
-#### PARTE C: Crear el handler
+### 💡 LO QUE HICISTE
 
-4. **Agrega el nuevo handler**
-   - Ve a `internal/adapter/http/handler/`
-   - Abre el archivo `user_handler.go`
-   - Ya existe un método `GetByID`, vamos a agregar otro
-   - Primero, modifica la estructura `UserHandler` para agregar el nuevo caso de uso:
-     - Agrega un campo `listUsersUC *userUsecase.ListUsersUsecase`
-   - Modifica el constructor para recibir ambos casos de uso
-   - Crea un nuevo método `List(w http.ResponseWriter, r *http.Request)`:
-     - Llama a `h.listUsersUC.Execute()`
-     - Devuelve la lista en JSON (igual que hace `GetByID`)
-
-#### PARTE D: Registrar la ruta
-
-5. **Conecta el nuevo endpoint en el router**
-   - Ve a `internal/infrastructure/http/`
-   - Abre el archivo `router.go`
-   - Busca donde se crea el `userHandler` (donde dice `NewUserHandler`)
-   - Primero, crea el nuevo caso de uso antes de crear el handler:
-     - `listUsersUC := userUsecase.NewListUsersUsecase(userRepo)`
-   - Modifica la línea donde se crea el handler para pasar ambos casos de uso
-   - Después de la línea `r.Get("/users/{id}", userHandler.GetByID)`
-   - Agrega: `r.Get("/users", userHandler.List)`
-
-6. **Prueba el nuevo endpoint**
-   - Reinicia el servidor
-   - Ejecuta: `curl http://localhost:8080/users`
-   - Deberías ver una lista de 10 usuarios
-
-### ✅ VERIFICACIÓN
-
-- ✅ `/users` devuelve una lista de usuarios (array JSON)
-- ✅ `/users/1` sigue funcionando (un solo usuario)
-
-### 💡 QUÉ APRENDISTE
-
-Para crear un endpoint completo:
-1. Agregas el método a la interfaz del repositorio
-2. Lo implementas en el repositorio concreto
-3. Creas un caso de uso que lo usa
-4. Creas un handler que llama al caso de uso
-5. Registras la ruta en el router
+Mejoraste los mensajes de error para que sean más claros para los usuarios.
 
 ---
 
-## EJERCICIO 7 - Agregar endpoint de bienvenida
+## EJERCICIO 9 - Crear endpoint para listar todos los usuarios
 
-### 📋 QUÉ QUEREMOS
+### 📋 LO QUE NECESITAMOS
 
-Crear un nuevo endpoint `/` (ruta raíz) que devuelva un mensaje de bienvenida cuando alguien entre a la API.
+Actualmente solo podemos ver un usuario a la vez con `/users/1`, `/users/2`, etc. El cliente necesita un nuevo endpoint `/users` (sin ID) que devuelva la lista completa de usuarios disponibles.
 
-Respuesta esperada:
+### 🎯 INSTRUCCIONES
+
+**PARTE A: Actualizar el contrato del repositorio**
+
+1. Ve a: `internal/domain/user/`
+2. Abre el archivo `repository.go`
+3. Agrega un nuevo método: `FindAll() ([]*User, error)`
+
+**PARTE B: Implementar la consulta**
+
+4. Ve a: `internal/adapter/repository/`
+5. Abre `user_api_repository.go`
+6. Crea el método `FindAll` que:
+   - Llame a la URL: `{baseURL}/users` (sin ID)
+   - Decodifique la respuesta en una lista de usuarios
+
+**PARTE C: Crear la lógica de negocio**
+
+7. Ve a: `internal/usecase/user/`
+8. Crea archivo nuevo: `list_users.go`
+9. Crea un caso de uso `ListUsersUsecase` que llame al método `FindAll` del repositorio
+
+**PARTE D: Exponer el endpoint**
+
+10. Ve a: `internal/adapter/http/handler/`
+11. En `user_handler.go`, agrega el nuevo caso de uso a la estructura
+12. Crea un método `List` que llame al caso de uso y devuelva JSON
+
+**PARTE E: Registrar la ruta**
+
+13. Ve a: `internal/infrastructure/http/router.go`
+14. Crea el caso de uso de listar usuarios
+15. Pásalo al handler
+16. Registra la ruta: `r.Get("/users", userHandler.List)`
+
+17. **Prueba**
+    - Reinicia el servidor
+    - Ejecuta: `curl http://localhost:8080/users`
+    - Debes ver una lista de 10 usuarios
+
+### ✅ RESULTADO ESPERADO
+
+- `/users` → Lista completa (array de usuarios)
+- `/users/1` → Sigue funcionando (un solo usuario)
+
+### 💡 LO QUE HICISTE
+
+Creaste un endpoint completo nuevo siguiendo todos los pasos de la arquitectura.
+
+---
+
+## EJERCICIO 10 - Endpoint de bienvenida en la raíz
+
+### 📋 LO QUE NECESITAMOS
+
+Cuando alguien entra a `http://localhost:8080/` queremos mostrar un mensaje de bienvenida con información básica:
+- Un mensaje amigable
+- La versión de la API
+- Lista de endpoints disponibles
+
+### 🎯 INSTRUCCIONES
+
+1. **Crea la estructura de datos**
+   - Crea carpeta: `internal/domain/welcome/`
+   - Crea archivo: `welcome.go`
+   - Define estructura con: `Message`, `Version`, `Endpoints` (lista)
+
+2. **Crea la lógica**
+   - Crea carpeta: `internal/usecase/welcome/`
+   - Crea archivo: `get_welcome.go`
+   - Devuelve:
+     - Message: "Bienvenido a la API de Ejercicio"
+     - Version: "1.1.0"
+     - Endpoints: ["/status", "/ping", "/users", "/users/{id}"]
+
+3. **Crea el punto de entrada**
+   - En `internal/adapter/http/handler/`
+   - Crea: `welcome_handler.go`
+   - Método que devuelva la información en JSON
+
+4. **Registra la ruta**
+   - En el router, registra: `r.Get("/", welcomeHandler.Get)`
+
+5. **Prueba**
+   - `curl http://localhost:8080/` → Debe mostrar la bienvenida
+
+### ✅ RESULTADO ESPERADO
+
 ```json
 {
   "message": "Bienvenido a la API de Ejercicio",
   "version": "1.1.0",
-  "endpoints": [
-    "/status",
-    "/ping",
-    "/users",
-    "/users/{id}"
-  ]
+  "endpoints": ["/status", "/ping", "/users", "/users/{id}"]
 }
 ```
 
-### 🎯 PASOS DETALLADOS
+### 💡 LO QUE HICISTE
 
-1. **Crea la entidad para la bienvenida**
-   - Crea una carpeta nueva en `internal/domain/` llamada `welcome`
-   - Dentro crea un archivo `welcome.go`
-   - Define una estructura con los campos:
-     - `Message` (string)
-     - `Version` (string)
-     - `Endpoints` (slice de strings: `[]string`)
-
-2. **Crea el caso de uso**
-   - Crea una carpeta `internal/usecase/welcome/`
-   - Crea el archivo `get_welcome.go`
-   - Crea el caso de uso `GetWelcomeUsecase`
-   - El método `Execute()` debe devolver la estructura Welcome con:
-     - Message: "Bienvenido a la API de Ejercicio"
-     - Version: "1.1.0"
-     - Endpoints: la lista de endpoints (como array)
-
-3. **Crea el handler**
-   - En `internal/adapter/http/handler/`
-   - Crea el archivo `welcome_handler.go`
-   - Sigue el mismo patrón que `ping_handler.go`
-   - El método debe llamar al caso de uso y devolver JSON
-
-4. **Registra la ruta**
-   - En `router.go`, al inicio (después de crear el router)
-   - Crea el caso de uso, el handler y registra la ruta `/`
-
-5. **Prueba**
-   - Reinicia el servidor
-   - Ejecuta: `curl http://localhost:8080/`
-   - Deberías ver el mensaje de bienvenida completo
-
-### ✅ VERIFICACIÓN
-
-- ✅ `curl http://localhost:8080/` muestra la bienvenida
-- ✅ Muestra la versión correcta
-- ✅ Muestra la lista de endpoints
+Creaste una página de inicio para la API que ayuda a los usuarios a descubrir los endpoints.
 
 ---
 
-## EJERCICIO 8 - Mejorar mensajes de error del repositorio
+## EJERCICIO 11 - Contador de peticiones al status
 
-### 📋 QUÉ QUEREMOS
+### 📋 LO QUE NECESITAMOS
 
-Cuando el endpoint de usuarios falla (ejemplo: usuario no existe), el mensaje de error no es muy claro. Queremos mejorar los mensajes según el código de error que devuelve la API externa.
+Para monitoreo, necesitamos saber cuántas veces se ha llamado al endpoint `/status`. Agrégale un campo `request_count` que se incremente en cada llamada.
 
-### 🎯 PASOS DETALLADOS
+### 🎯 INSTRUCCIONES
 
-1. **Mejora el manejo de errores en el repositorio**
-   - Ve a `internal/adapter/repository/`
-   - Abre el archivo del repositorio de usuarios
-   - Busca la parte que valida `resp.StatusCode != http.StatusOK`
-   - Reemplázala por múltiples validaciones:
-     - Si `resp.StatusCode == 404`: error "usuario no encontrado"
-     - Si `resp.StatusCode >= 500`: error "el servidor externo no está disponible"
-     - Si otro código: error "error inesperado del servidor: código {código}"
-
-2. **Prueba los diferentes casos de error**
-   - ID que no existe: `curl http://localhost:8080/users/999`
-     - Debe decir "usuario no encontrado"
-   - Si la API externa falla (simula apagando tu internet un momento)
-     - Debe decir error de conexión
-
-### ✅ VERIFICACIÓN
-
-- ✅ Errores 404 muestran "usuario no encontrado"
-- ✅ Errores 500+ muestran "servidor externo no disponible"
-- ✅ IDs válidos siguen funcionando
-
----
-
-## EJERCICIO 9 - Crear endpoint combinado usuario + estado
-
-### 📋 QUÉ QUEREMOS
-
-Crear un endpoint `/user-info/{id}` que devuelva en una sola respuesta:
-- La información del usuario
-- El estado actual del servidor
-
-Esto es útil cuando el cliente necesita ambos datos y no quiere hacer dos peticiones separadas.
-
-Respuesta esperada:
-```json
-{
-  "user": {
-    "id": 1,
-    "name": "Leanne Graham",
-    "email": "...",
-    "username": "..."
-  },
-  "server_status": {
-    "message": "...",
-    "version": "1.1.0",
-    "uptime": 42,
-    "environment": "development",
-    "timestamp": "..."
-  }
-}
-```
-
-### 🎯 PASOS DETALLADOS
-
-1. **Crea la nueva entidad combinada**
-   - Crea carpeta `internal/domain/userinfo/`
-   - Crea archivo `user_info.go`
-   - Define estructura `UserInfo` con dos campos:
-     - `User` de tipo `*user.User`
-     - `ServerStatus` de tipo `*status.Status`
-   - Tags JSON: `"user"` y `"server_status"`
-
-2. **Crea el caso de uso combinado**
-   - Crea carpeta `internal/usecase/userinfo/`
-   - Crea archivo `get_user_info.go`
-   - Este caso de uso necesita DOS dependencias:
-     - El caso de uso de GetUser
-     - El caso de uso de GetStatus
-   - El método `Execute(id int)` debe:
-     - Llamar a GetUser con el ID
-     - Llamar a GetStatus
-     - Combinar ambos en UserInfo
-     - Devolver el resultado
-
-3. **Crea el handler**
-   - En `internal/adapter/http/handler/`
-   - Crea `user_info_handler.go`
-   - Extrae el ID de la URL (como hace `user_handler.go`)
-   - Llama al caso de uso con el ID
-   - Devuelve el JSON combinado
-
-4. **Registra la ruta**
-   - En `router.go`, después de las otras rutas de users
-   - Crea el caso de uso combinado pasándole los dos casos de uso que necesita
-   - Crea el handler
-   - Registra la ruta `/user-info/{id}`
-
-5. **Prueba**
-   - Reinicia el servidor
-   - Ejecuta: `curl http://localhost:8080/user-info/1`
-   - Deberías ver ambos datos combinados
-
-### ✅ VERIFICACIÓN
-
-- ✅ El endpoint devuelve tanto el usuario como el status
-- ✅ Si el ID es inválido, solo muestra error del usuario
-- ✅ Los endpoints originales siguen funcionando
-
-### 💡 QUÉ APRENDISTE
-
-Puedes crear casos de uso que usan otros casos de uso para combinar funcionalidades.
-
----
-
-## EJERCICIO 10 - Agregar test para validación de ID
-
-### 📋 QUÉ QUEREMOS
-
-Crear una prueba automática que verifique que la validación de IDs funciona correctamente. Esto asegura que si alguien modifica el código en el futuro, la validación siga funcionando.
-
-### 🎯 PASOS DETALLADOS
-
-1. **Abre el archivo de tests existente**
-   - Ve a `test/usecase/user/`
-   - Abre el archivo de tests de usuario
-   - Verás que ya hay tests como `TestGetUserUsecase_Execute`
-
-2. **Agrega un nuevo test para validar el límite superior**
-   - Crea una nueva función de test (copia el formato de los existentes)
-   - Nombre: `TestGetUserUsecase_Execute_IDTooHigh`
-   - Dentro del test:
-     - Crea el mock del repositorio (igual que los otros tests)
-     - Crea el caso de uso
-     - Llama a `Execute(99)` (un ID mayor a 10)
-     - Verifica que SÍ devuelve error
-     - Verifica que el mensaje del error contiene "entre 1 y 10"
-
-3. **Ejecuta los tests**
-   - En la terminal: `go test ./test/... -v`
-   - Todos los tests deben pasar
-   - Deberías ver tu nuevo test en la lista
-
-### ✅ VERIFICACIÓN
-
-- ✅ El comando de tests muestra todos los tests pasando
-- ✅ Aparece tu nuevo test en la lista
-- ✅ Si cambias la validación del caso de uso, el test lo detecta
-
----
-
-## EJERCICIO 11 - Agregar contador de peticiones al status
-
-### 📋 QUÉ QUEREMOS
-
-Queremos que el endpoint `/status` también muestre cuántas veces ha sido llamado desde que arrancó el servidor.
-
-Ejemplo: Si llamas `/status` 3 veces, la tercera vez debe mostrar `"request_count": 3`.
-
-### 🎯 PASOS DETALLADOS
-
-1. **Agrega el campo a la entidad**
+1. **Agrega el campo**
    - En `internal/domain/status/`
-   - Agrega campo `RequestCount` (tipo `int`) con tag JSON `"request_count"`
+   - Agrega: `RequestCount` de tipo `int` con tag JSON `"request_count"`
 
-2. **Agrega un contador al caso de uso**
+2. **Implementa el contador**
    - En `internal/usecase/status/`
-   - La estructura `GetStatusUsecase` ya tiene un campo `startTime`
-   - Agrega otro campo llamado `requestCount` (tipo `int`)
-   - En el método `Execute()`:
-     - Incrementa el contador: `uc.requestCount++`
-     - Incluye el contador en la respuesta: `RequestCount: uc.requestCount`
+   - Agrega un campo `requestCount int` a la estructura del caso de uso
+   - En el método Execute, incrementa: `uc.requestCount++`
+   - Incluye en la respuesta: `RequestCount: uc.requestCount`
 
 3. **Prueba**
-   - Reinicia el servidor
    - Llama varias veces: `curl http://localhost:8080/status`
-   - El número debe aumentar en cada llamada
+   - El número debe ir aumentando: 1, 2, 3, etc.
 
-### ✅ VERIFICACIÓN
+### ✅ RESULTADO ESPERADO
 
-- Primera llamada: `"request_count": 1`
-- Segunda llamada: `"request_count": 2`
-- Tercera llamada: `"request_count": 3`
+Primera llamada: `"request_count": 1`
+Segunda llamada: `"request_count": 2`
+Tercera llamada: `"request_count": 3`
 
-### 💡 QUÉ APRENDISTE
+### 💡 LO QUE HICISTE
 
-Los casos de uso pueden mantener estado interno (variables que cambian con cada llamada).
+Agregaste una métrica simple de uso del endpoint.
 
 ---
 
-## EJERCICIO 12 - Crear módulo completo de productos
+## EJERCICIO 12 - Endpoint que combina usuario y estado del servidor
 
-### 📋 QUÉ QUEREMOS
+### 📋 LO QUE NECESITAMOS
 
-Crear un módulo completamente nuevo para manejar productos. La API de productos está en `https://fakestoreapi.com`.
+El equipo frontend hace dos llamadas separadas: una a `/users/1` y otra a `/status`. Para mejorar el rendimiento, necesitamos un nuevo endpoint `/user-info/1` que devuelva ambos datos en una sola respuesta.
 
-Necesitamos:
-- Endpoint `/products/{id}` para obtener un producto por ID
-- Endpoint `/products` para listar todos los productos
+### 🎯 INSTRUCCIONES
 
-Un producto tiene:
-- ID (número)
-- Title (texto)
-- Price (número decimal)
-- Description (texto)
-- Category (texto)
+1. **Crea la estructura combinada**
+   - Carpeta: `internal/domain/userinfo/`
+   - Archivo: `user_info.go`
+   - Campos: `User` y `ServerStatus`
 
-### 🎯 PASOS DETALLADOS
+2. **Crea la lógica que combina**
+   - Carpeta: `internal/usecase/userinfo/`
+   - Archivo: `get_user_info.go`
+   - Este caso de uso necesita:
+     - El caso de uso de GetUser
+     - El caso de uso de GetStatus
+   - Llama a ambos y combina los resultados
 
-#### PARTE 1: Crear el dominio
+3. **Crea el handler**
+   - En `internal/adapter/http/handler/`
+   - Archivo: `user_info_handler.go`
+   - Extrae el ID, llama al caso de uso, devuelve JSON
 
-1. **Crea la entidad Product**
-   - Carpeta: `internal/domain/product/`
-   - Archivo: `product.go`
-   - Estructura con los campos mencionados arriba
+4. **Registra la ruta**
+   - En router: `r.Get("/user-info/{id}", userInfoHandler.GetByID)`
 
-2. **Crea la interfaz del repositorio**
-   - Archivo: `internal/domain/product/repository.go`
-   - Métodos:
-     - `FindByID(id int) (*Product, error)`
-     - `FindAll() ([]*Product, error)`
+5. **Prueba**
+   - `curl http://localhost:8080/user-info/1`
+   - Debe mostrar usuario + status en una respuesta
 
-#### PARTE 2: Implementar el repositorio
+### ✅ RESULTADO ESPERADO
 
-3. **Crea el repositorio que consulta la API externa**
-   - Carpeta: `internal/adapter/repository/`
-   - Archivo: `product_api_repository.go`
-   - URL base: `https://fakestoreapi.com`
-   - Implementa ambos métodos siguiendo el patrón de `user_api_repository.go`
+```json
+{
+  "user": { "id": 1, "name": "...", ... },
+  "server_status": { "message": "...", "version": "1.1.0", ... }
+}
+```
 
-#### PARTE 3: Crear los casos de uso
+### 💡 LO QUE HICISTE
 
-4. **Caso de uso para obtener un producto**
-   - Carpeta: `internal/usecase/product/`
-   - Archivo: `get_product.go`
-   - Valida que el ID esté entre 1 y 20
+Creaste un endpoint optimizado que reduce el número de peticiones del cliente.
 
-5. **Caso de uso para listar productos**
-   - Archivo: `list_products.go`
-   - No necesita validaciones, solo llama al repositorio
+---
 
-#### PARTE 4: Crear los handlers
+## EJERCICIO 13 - Validar que el nombre no esté vacío (preparación)
 
-6. **Crea el handler de productos**
-   - Carpeta: `internal/adapter/http/handler/`
-   - Archivo: `product_handler.go`
-   - Dos métodos: `GetByID` y `List`
+### 📋 LO QUE NECESITAMOS
 
-#### PARTE 5: Registrar las rutas
+Preparación para futuros endpoints: Si en el futuro agregamos un endpoint que reciba un nombre, necesitamos asegurarnos de que no esté vacío. Por ahora, solo agrega la función de validación.
 
-7. **Conecta todo en el router**
-   - En `router.go`, después de las rutas de users
-   - Crea el repositorio, los casos de uso, el handler
-   - Registra:
-     - `GET /products`
-     - `GET /products/{id}`
+### 🎯 INSTRUCCIONES
 
-#### PARTE 6: Crear tests
+1. **Crea un paquete de validaciones**
+   - Carpeta: `internal/domain/validation/`
+   - Archivo: `text_validation.go`
 
-8. **Crea tests para los casos de uso**
-   - Carpeta: `test/usecase/product/`
-   - Archivos:
-     - `get_product_test.go`
-     - `list_products_test.go`
-   - Usa mocks como en los tests de user
+2. **Crea la función**
+   - Función: `ValidateNotEmpty(text string) error`
+   - Si el texto está vacío, devuelve error: "el campo no puede estar vacío"
+   - Si no está vacío, devuelve nil (sin error)
 
-### ✅ VERIFICACIÓN
+3. **Prueba manual** (opcional)
+   - Crea un test en `test/domain/validation/`
+   - Verifica que rechaza textos vacíos
 
-- ✅ `curl http://localhost:8080/products` muestra lista de productos
-- ✅ `curl http://localhost:8080/products/1` muestra un producto
-- ✅ `curl http://localhost:8080/products/999` da error de validación
-- ✅ Los tests pasan: `go test ./test/... -v`
+### ✅ RESULTADO ESPERADO
 
-### 💡 QUÉ APRENDISTE
+Tienes una función reutilizable para validar textos en futuros endpoints.
 
-Has creado un módulo completo desde cero siguiendo el mismo patrón de la arquitectura.
+### 💡 LO QUE HICISTE
+
+Creaste una utilidad que se puede usar en múltiples lugares.
+
+---
+
+## EJERCICIO 14 - Crear módulo completo de productos
+
+### 📋 LO QUE NECESITAMOS
+
+El cliente quiere agregar productos a la aplicación. Necesitamos crear todo un módulo nuevo que se conecte a `https://fakestoreapi.com`:
+
+- Endpoint para obtener un producto: `/products/1`
+- Endpoint para listar productos: `/products`
+
+Un producto tiene: ID, Título, Precio, Descripción, Categoría.
+
+### 🎯 INSTRUCCIONES
+
+**PARTE 1: Estructura de datos**
+1. Crea: `internal/domain/product/product.go` con los campos necesarios
+2. Crea: `internal/domain/product/repository.go` con los métodos FindByID y FindAll
+
+**PARTE 2: Conexión con API externa**
+3. Crea: `internal/adapter/repository/product_api_repository.go`
+4. Implementa los métodos usando URL: `https://fakestoreapi.com`
+
+**PARTE 3: Lógica de negocio**
+5. Crea: `internal/usecase/product/get_product.go` (valida ID entre 1 y 20)
+6. Crea: `internal/usecase/product/list_products.go`
+
+**PARTE 4: Endpoints HTTP**
+7. Crea: `internal/adapter/http/handler/product_handler.go`
+8. Métodos: GetByID y List
+
+**PARTE 5: Registro**
+9. En router, registra:
+   - `GET /products`
+   - `GET /products/{id}`
+
+**PARTE 6: Tests**
+10. Crea tests en: `test/usecase/product/`
+
+### ✅ RESULTADO ESPERADO
+
+- `/products` → Lista de productos
+- `/products/1` → Un producto específico
+- `/products/999` → Error de validación
+
+### 💡 LO QUE HICISTE
+
+Creaste un módulo completo nuevo desde cero, replicando la estructura existente.
 
 ---
 
 ## 🎓 FELICIDADES
 
-Has completado el taller. Ahora sabes:
+Has completado el taller completo. Ahora puedes:
 
-✅ Modificar respuestas de endpoints existentes
+✅ Cambiar textos y valores en los endpoints
+✅ Agregar validaciones de datos
 ✅ Agregar nuevos campos a las respuestas
-✅ Crear validaciones de negocio
+✅ Mejorar mensajes de error
 ✅ Crear endpoints completamente nuevos
-✅ Combinar datos de múltiples fuentes
-✅ Mejorar manejo de errores
-✅ Crear tests automáticos
-✅ Mantener estado en los casos de uso
-✅ Crear módulos completos desde cero
+✅ Combinar información de múltiples fuentes
+✅ Mantener contadores y métricas
+✅ Crear módulos completos siguiendo la arquitectura
 
-## 🚀 SIGUIENTES PASOS
+## 🚀 SIGUIENTES DESAFÍOS
 
-Ahora que dominas lo básico, puedes:
+Ahora que dominas lo básico:
 
-1. **Agregar autenticación**: Que solo usuarios registrados puedan usar la API
-2. **Agregar paginación**: En los endpoints que devuelven listas
-3. **Agregar filtros**: Por ejemplo, `/products?category=electronics`
-4. **Conectar una base de datos**: En lugar de APIs externas
-5. **Agregar caché**: Para responder más rápido
-6. **Agregar documentación Swagger**: Para que otros sepan cómo usar tu API
+1. **Agrega paginación** a los endpoints de listas
+2. **Agrega filtros** (ejemplo: `/products?category=electronics`)
+3. **Agrega autenticación** para proteger los endpoints
+4. **Conecta una base de datos** real en lugar de APIs externas
+5. **Agrega documentación automática** con Swagger
 
 ¡Sigue practicando! 🎉
