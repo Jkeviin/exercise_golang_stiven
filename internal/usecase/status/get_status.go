@@ -20,8 +20,7 @@ func (uc *GetStatusUsecase) Execute() *status.Status {
 
 	return &status.Status{
 		Message: "La aplicación está funcionando correctamente",
-		Version: "1.0.0",
+		Version: "1.1.0",
 		Uptime:  int64(uptime),
 	}
 }
-

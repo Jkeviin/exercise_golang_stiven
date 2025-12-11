@@ -10,7 +10,6 @@ func NewPingUsecase() *PingUsecase {
 
 func (uc *PingUsecase) Execute() *ping.Ping {
 	return &ping.Ping{
-		Message: "pong",
+		Message: "API funcionando correctamente",
 	}
 }
-

@@ -1,67 +1,10 @@
-# Configuración de Air para hot reload
-# Air reinicia automáticamente el servidor cuando detecta cambios en el código
-
 root = "."
-testdata_dir = "testdata"
 tmp_dir = "tmp"
 
 [build]
-  # Archivo principal a ejecutar
-  cmd = "go build -o ./tmp/main ./cmd/app/main.go"
-  
-  # Binario generado
-  bin = "tmp/main"
-  
-  # Qué archivos vigilar
-  include_ext = ["go", "tpl", "tmpl", "html"]
-  
-  # Qué archivos ignorar
-  exclude_dir = ["assets", "tmp", "vendor", "testdata", "test"]
-  exclude_file = []
-  exclude_regex = ["_test.go"]
-  exclude_unchanged = false
-  
-  # Seguir enlaces simbólicos
-  follow_symlink = false
-  
-  # Poll en lugar de usar fsnotify (más estable en algunos sistemas)
-  poll = false
-  poll_interval = 0
-  
-  # Retrasar el reinicio (ms) después de detectar cambios
-  delay = 1000
-  
-  # Detener el proceso anterior antes de reiniciar
-  stop_on_error = false
-  
-  # Enviar señal de interrupción antes de matar el proceso
-  send_interrupt = false
-  
-  # Retrasar después de enviar señal de interrupción (ms)
-  kill_delay = 500
-  
-  # Agregar argumentos adicionales al ejecutar el binario
-  args_bin = []
-  
-  # Logs del build
-  log = "build-errors.log"
-
-[color]
-  # Personalizar colores de la salida
-  main = "magenta"
-  watcher = "cyan"
-  build = "yellow"
-  runner = "green"
-
-[log]
-  # Mostrar timestamp en logs
-  time = false
-
-[misc]
-  # Limpiar la terminal antes de cada build
-  clean_on_exit = true
-
-[screen]
-  clear_on_rebuild = true
-  keep_scroll = true
-
+  # comando para compilar el main que está en cmd/app
+  cmd = "go build -o ./tmp/main.exe ./cmd/app"
+  # ruta del binario que ejecutará air
+  bin = "tmp/main.exe"
+  include_ext = ["go", "mod", "tmpl", "tpl"]
+  exclude_dir = ["tmp", "vendor"]
