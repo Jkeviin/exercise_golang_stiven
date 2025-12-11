@@ -199,15 +199,43 @@ internal/infrastructure/
 **Contiene**:
 - `main.go`: Crea todas las dependencias y arranca el servidor
 
-**Código real**:
+**Flujo de inicialización**:
+
+```go
+func main() {
+    // 1️⃣ CARGAR CONFIGURACIÓN
+    cfg := config.Load()
+
+    // 2️⃣ CREAR REPOSITORIOS (Capa de Adaptadores)
+    userRepo := repository.NewUserAPIRepository(cfg.ExternalAPIURL)
+
+    // 3️⃣ CREAR CASOS DE USO (Capa de Aplicación)
+    // Inyectamos los repositorios en los casos de uso
+    getUserUsecase := userUsecase.NewGetUserUsecase(userRepo)
+    getStatusUsecase := statusUsecase.NewGetStatusUsecase()
+    pingUsecase := pingUsecase.NewPingUsecase()
+
+    // 4️⃣ CREAR HANDLERS HTTP (Capa de Adaptadores)
+    // Inyectamos los casos de uso en los handlers
+    userHandler := handler.NewUserHandler(getUserUsecase)
+    statusHandler := handler.NewStatusHandler(getStatusUsecase)
+    pingHandler := handler.NewPingHandler(pingUsecase)
+
+    // 5️⃣ CONFIGURAR ROUTER (Capa de Infraestructura)
+    router := httpInfra.SetupRouter(userHandler, statusHandler, pingHandler)
+
+    // 6️⃣ INICIAR SERVIDOR HTTP
+    httpInfra.Start(cfg, router)
+}
 ```
-1. Carga configuración
-2. Crea repositorios (adapters)
-3. Crea casos de uso (inyectando repositorios)
-4. Crea handlers (inyectando casos de uso)
-5. Configura router (infrastructure)
-6. Arranca servidor HTTP
-```
+
+**Lo que hace cada paso**:
+1. Lee variables de entorno (puerto, URLs externas)
+2. Crea implementaciones concretas de repositorios
+3. Inyecta repositorios en casos de uso (Dependency Injection)
+4. Inyecta casos de uso en handlers HTTP
+5. Configura rutas y conecta handlers con el router
+6. Levanta el servidor HTTP en el puerto configurado
 
 ---
 

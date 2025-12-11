@@ -2,47 +2,45 @@ package http
 
 import (
 	"ejercicio-api/internal/adapter/http/handler"
-	"ejercicio-api/internal/adapter/repository"
 	"ejercicio-api/internal/config"
-	pingUsecase "ejercicio-api/internal/usecase/ping"
-	statusUsecase "ejercicio-api/internal/usecase/status"
-	userUsecase "ejercicio-api/internal/usecase/user"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-func NewRouter(cfg *config.Config) *chi.Mux {
+// SetupRouter configura el router HTTP con los handlers ya inicializados
+// Esta función pertenece a la capa de INFRAESTRUCTURA
+// Responsabilidad: Configurar rutas, middleware y conectar handlers
+func SetupRouter(
+	userHandler *handler.UserHandler,
+	statusHandler *handler.StatusHandler,
+	pingHandler *handler.PingHandler,
+) *chi.Mux {
+	// Crear router chi
 	r := chi.NewRouter()
 
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
-	r.Use(middleware.RequestID)
+	// Middleware: funciones que se ejecutan antes de los handlers
+	r.Use(middleware.Logger)    // Log de cada request
+	r.Use(middleware.Recoverer) // Recuperación de panics
+	r.Use(middleware.RequestID) // ID único por request
 
-	// Status
-	statusUC := statusUsecase.NewGetStatusUsecase()
-	statusHandler := handler.NewStatusHandler(statusUC)
-	r.Get("/status", statusHandler.Get)
+	// REGISTRAR RUTAS
+	// Cada ruta conecta un endpoint HTTP con un handler
 
-	// Ping
-	pingUC := pingUsecase.NewPingUsecase()
-	pingHandler := handler.NewPingHandler(pingUC)
-	r.Get("/ping", pingHandler.Ping)
+	// Health checks
+	r.Get("/status", statusHandler.Get) // Estado del servidor
+	r.Get("/ping", pingHandler.Ping)    // Verificación rápida
 
-	// Users
-	userRepo := repository.NewUserAPIRepository(cfg.ExternalAPIURL)
-	getUserUC := userUsecase.NewGetUserUsecase(userRepo)
-	userHandler := handler.NewUserHandler(getUserUC)
-	r.Get("/users/{id}", userHandler.GetByID)
+	// Rutas de negocio
+	r.Get("/users/{id}", userHandler.GetByID) // Obtener usuario por ID
 
 	return r
 }
 
+// Start inicia el servidor HTTP en el puerto configurado
 func Start(cfg *config.Config, router *chi.Mux) error {
 	addr := fmt.Sprintf(":%s", cfg.ServerPort)
-	log.Printf("🚀 Servidor iniciado en http://localhost%s", addr)
 	return http.ListenAndServe(addr, router)
 }
