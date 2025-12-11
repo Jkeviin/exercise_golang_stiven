@@ -1,0 +1,29 @@
+# Binarios
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+ejercicio-api
+app
+
+# Test binary
+*.test
+
+# Output
+*.out
+
+# Dependencias
+vendor/
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
