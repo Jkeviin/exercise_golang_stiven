@@ -23,6 +23,12 @@ curl http://localhost:8080/users/1
 go test ./...  -v
 ```
 
+## 📚 Documentación
+
+- **[ARQUITECTURA.md](ARQUITECTURA.md)** - Explicación detallada de cómo está construido el proyecto, responsabilidad de cada carpeta según DDD y Clean Architecture
+- **[WORKSHOP.md](docs/WORKSHOP.md)** - Ejercicios prácticos paso a paso para aprender
+- **[README_POSTMAN.md](README_POSTMAN.md)** - Guía para usar la colección de Postman
+
 ## 📁 Estructura (Clean Architecture + DDD)
 
 ```
