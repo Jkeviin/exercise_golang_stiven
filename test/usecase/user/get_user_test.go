@@ -40,3 +40,4 @@ func TestGetUserUsecase_Execute_InvalidID(t *testing.T) {
 		t.Error("Se esperaba un error para ID = 0")
 	}
 }
+

@@ -13,3 +13,4 @@ func (uc *PingUsecase) Execute() *ping.Ping {
 		Message: "pong",
 	}
 }
+

@@ -5,3 +5,4 @@ type Status struct {
 	Version string `json:"version"`
 	Uptime  int64  `json:"uptime"`
 }
+

@@ -21,3 +21,4 @@ func TestGetStatusUsecase_Execute(t *testing.T) {
 		t.Error("Uptime no puede ser negativo")
 	}
 }
+

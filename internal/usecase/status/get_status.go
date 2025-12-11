@@ -24,3 +24,4 @@ func (uc *GetStatusUsecase) Execute() *status.Status {
 		Uptime:  int64(uptime),
 	}
 }
+

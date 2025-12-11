@@ -39,3 +39,4 @@ func (r *UserAPIRepository) FindByID(id int) (*user.User, error) {
 
 	return &u, nil
 }
+

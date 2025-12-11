@@ -13,3 +13,4 @@ func TestPingUsecase_Execute(t *testing.T) {
 		t.Errorf("Se esperaba 'pong', pero se obtuvo '%s'", ping.Message)
 	}
 }
+
