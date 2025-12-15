@@ -1,19 +1,19 @@
-# 🚀 Ejercicio API - Clean Architecture en Golang
+# 🚀 Ejercicio API - Clean Architecture en Go
 
-Proyecto educativo para aprender Clean Architecture y DDD desde cero.
+Proyecto educativo para aprender Clean Architecture y DDD desde cero con 38 ejercicios prácticos.
+
+---
 
 ## ⚡ Inicio Rápido
 
-### Mac/Linux:
-
 ```bash
-# Instalar dependencias
+# 1. Instalar dependencias
 go mod tidy
 
-# Ejecutar servidor
+# 2. Ejecutar servidor
 go run cmd/app/main.go
 
-# Probar endpoints
+# 3. Probar endpoints
 curl http://localhost:8080/          # Bienvenida
 curl http://localhost:8080/status    # Estado del servidor
 curl http://localhost:8080/ping      # Health check
@@ -21,24 +21,83 @@ curl http://localhost:8080/users     # Lista de usuarios
 curl http://localhost:8080/users/1   # Usuario específico
 ```
 
-### Windows:
+**Si funciona todo** → ¡Adelante! 🎉
 
-```cmd
-REM Instalar dependencias
-scripts\deps.bat
+---
 
-REM Ejecutar servidor
-scripts\run.bat
+## 📚 Documentación
 
-REM O ejecutar con hot reload
-scripts\dev.bat
+| Archivo | Descripción |
+|---------|-------------|
+| **[docs/TALLER.md](docs/TALLER.md)** | 🎓 **38 ejercicios prácticos** - Empieza aquí |
+| **[ARQUITECTURA.md](ARQUITECTURA.md)** | 🏛️ Explicación de Clean Architecture + DDD |
+| **[docs/ENDPOINTS.md](docs/ENDPOINTS.md)** | 📍 Guía de endpoints disponibles |
+
+---
+
+## 🎯 Endpoints Disponibles
+
+| Ruta | Método | Descripción |
+|------|--------|-------------|
+| `/` | GET | Mensaje de bienvenida |
+| `/status` | GET | Estado del servidor con métricas |
+| `/ping` | GET | Health check |
+| `/users` | GET | Lista todos los usuarios |
+| `/users/{id}` | GET | Usuario por ID (1-10) |
+
+---
+
+## 📁 Estructura del Proyecto
+
+```
+ejercicio-api/
+├── cmd/app/main.go         # Punto de entrada
+├── internal/
+│   ├── domain/             # Entidades y reglas de negocio
+│   ├── usecase/            # Casos de uso (lógica de aplicación)
+│   ├── adapter/            # Adaptadores (handlers, repositorios)
+│   ├── infrastructure/     # Infraestructura (router, servidor)
+│   └── config/             # Configuración
+├── docs/
+│   ├── TALLER.md          # 38 ejercicios prácticos
+│   └── ENDPOINTS.md       # Documentación de endpoints
+└── ARQUITECTURA.md        # Guía de arquitectura
 ```
 
-> **💡 Nota para Windows**: `make` no funciona por defecto. Usa los scripts `.bat` en la carpeta `scripts/`. Ver [Guía Windows](docs/WINDOWS.md).
+---
 
-## 🔥 Desarrollo con Hot Reload
+## 🏛️ Arquitectura
 
-Para no tener que reiniciar el servidor en cada cambio, usa **Air**:
+Este proyecto implementa:
+
+- ✅ **Clean Architecture** - Separación en capas independientes
+- ✅ **Domain-Driven Design (DDD)** - Código organizado por dominio
+- ✅ **Inyección de Dependencias** - Componentes desacoplados
+- ✅ **Arquitectura Hexagonal** - Fácil de testear y mantener
+
+**Flujo de datos:**
+```
+HTTP Request → Handler → UseCase → Repository → API Externa → Response
+```
+
+---
+
+## 🎓 Aprendizaje
+
+### ¿Quieres aprender haciendo?
+
+Ve a **[docs/TALLER.md](docs/TALLER.md)** para:
+- 38 ejercicios progresivos
+- Desde básico hasta avanzado
+- Sin código para copiar (aprende de verdad)
+
+**No copies y pegues - piensa, intenta, debuggea, aprende.**
+
+---
+
+## 🔥 Desarrollo con Hot Reload (Opcional)
+
+Para no reiniciar el servidor en cada cambio:
 
 ```bash
 # 1. Instalar Air (solo una vez)
@@ -46,135 +105,17 @@ go install github.com/air-verse/air@latest
 
 # 2. Ejecutar con hot reload
 air
-# O usando Make:
-make dev
 ```
 
-**Con Air**:
-- ✅ Reinicio automático al guardar cambios
-- ✅ No necesitas detener/iniciar el servidor
-- ✅ Compilación rápida
-- ✅ Logs en colores
+---
 
 ## 🧪 Tests
 
 ```bash
-go test ./...  -v
+go test ./... -v
 ```
 
-## 📚 Documentación
-
-- **[ARQUITECTURA.md](ARQUITECTURA.md)** - Explicación detallada de cómo está construido el proyecto, responsabilidad de cada carpeta según DDD y Clean Architecture
-- **[WINDOWS.md](docs/WINDOWS.md)** - 🪟 Guía completa para usar el proyecto en Windows (scripts .bat, make alternativo)
-- **[HOT_RELOAD.md](docs/HOT_RELOAD.md)** - 🔥 Guía de hot reload con Air (recarga automática sin reiniciar)
-- **[WORKSHOP.md](docs/WORKSHOP.md)** - Ejercicios prácticos paso a paso para aprender
-- **[README_POSTMAN.md](README_POSTMAN.md)** - Guía para usar la colección de Postman
-
-## 📁 Estructura (Clean Architecture + DDD)
-
-```
-ejercicio-api/
-├── cmd/app/                              # Punto de entrada
-├── internal/
-│   ├── domain/                           # CAPA DE DOMINIO
-│   │   ├── user/
-│   │   │   ├── user.go                   # Entidad User
-│   │   │   └── repository.go             # Interface del repositorio
-│   │   ├── status/
-│   │   │   └── status.go                 # Entidad Status
-│   │   ├── ping/
-│   │   │   └── ping.go                   # Entidad Ping
-│   │   └── welcome/
-│   │       └── welcome.go                # Entidad Welcome
-│   │
-│   ├── usecase/                          # CAPA DE APLICACIÓN
-│   │   ├── user/
-│   │   │   ├── get_user.go               # Caso de uso: Obtener usuario
-│   │   │   └── get_user_all.go           # Caso de uso: Listar usuarios
-│   │   ├── status/
-│   │   │   └── get_status.go             # Caso de uso: Obtener status
-│   │   ├── ping/
-│   │   │   └── ping.go                   # Caso de uso: Ping
-│   │   └── welcome/
-│   │       └── get_welcome.go            # Caso de uso: Bienvenida
-│   │
-│   ├── adapter/                          # CAPA DE ADAPTADORES
-│   │   ├── http/handler/                 # Handlers HTTP
-│   │   │   ├── user_handler.go
-│   │   │   ├── status_handler.go
-│   │   │   ├── ping_handler.go
-│   │   │   └── welcome_handler.go
-│   │   └── repository/
-│   │       └── user_api_repository.go    # Implementación del repositorio
-│   │
-│   ├── infrastructure/                   # CAPA DE INFRAESTRUCTURA
-│   │   └── http/
-│   │       └── router.go                 # Router y servidor HTTP
-│   │
-│   └── config/
-│       └── config.go                     # Configuración
-│
-└── test/                                 # Tests organizados por usecase
-    └── usecase/
-        ├── user/
-        ├── status/
-        └── ping/
-```
-
-## 🎯 Endpoints
-
-| Ruta | Descripción |
-|------|-------------|
-| `GET /` | Mensaje de bienvenida y lista de endpoints |
-| `GET /status` | Estado del servidor con uptime |
-| `GET /ping` | Health check |
-| `GET /users/{id}` | Usuario por ID (API externa) |
-| `GET /users` | Lista de todos los usuarios |
-
-## 🏛️ Principios Aplicados
-
-### Clean Architecture
-- ✅ **Independencia de frameworks**: El dominio no depende de chi, http, etc.
-- ✅ **Testeable**: Los casos de uso se prueban sin necesidad de servidor
-- ✅ **Independiente de UI**: Los handlers son intercambiables
-- ✅ **Independiente de BD**: El repositorio es una interfaz
-
-### DDD (Domain-Driven Design)
-- ✅ **Entidades en domain**: `User`, `Status`, `Ping`
-- ✅ **Repositorios como interfaces**: `user.Repository`
-- ✅ **Casos de uso**: Lógica de aplicación separada
-- ✅ **Adaptadores**: Implementaciones concretas fuera del dominio
-
-## 🔄 Flujo de Datos
-
-```
-HTTP Request
-    ↓
-Handler (adapter/http/handler)
-    ↓
-Usecase (usecase/)
-    ↓
-Repository Interface (domain/)
-    ↓
-Repository Implementation (adapter/repository)
-    ↓
-External API
-    ↓
-Domain Entity
-    ↓
-Response
-```
-
-## 🛠 Tecnologías
-
-- **Go 1.21+**
-- **chi router** - Router HTTP moderno
-- **Clean Architecture** - Separación en capas
-- **DDD** - Domain-Driven Design
-
-## 📖 Aprendizaje
-
-Ve a [docs/WORKSHOP.md](docs/WORKSHOP.md) para ejercicios prácticos paso a paso.
+---
 
 ## ⚙️ Configuración
 
@@ -185,35 +126,40 @@ SERVER_PORT=8080
 EXTERNAL_API_URL=https://jsonplaceholder.typicode.com
 ```
 
-## 🔧 Comandos
+---
 
-### Mac/Linux (con Make):
+## 🛠 Tecnologías
+
+- **Go 1.21+**
+- **chi router** - Router HTTP minimalista
+- **Clean Architecture** - Separación en capas
+- **DDD** - Domain-Driven Design
+
+---
+
+## 🌟 Características
+
+- ✅ Arquitectura profesional y escalable
+- ✅ Código limpio y bien organizado
+- ✅ Fácil de entender y mantener
+- ✅ Preparado para tests
+- ✅ 38 ejercicios prácticos para aprender
+
+---
+
+## 📖 Recursos de Aprendizaje
+
+1. **[docs/TALLER.md](docs/TALLER.md)** - Empieza aquí con los ejercicios
+2. **[ARQUITECTURA.md](ARQUITECTURA.md)** - Entiende cómo está construido
+3. **[docs/ENDPOINTS.md](docs/ENDPOINTS.md)** - Explora los endpoints
+
+---
+
+## 🚀 Siguiente Paso
 
 ```bash
-make deps     # Instalar dependencias
-make dev      # 🔥 Ejecutar con hot reload (recomendado para desarrollo)
-make run      # Ejecutar servidor (sin hot reload)
-make test     # Ejecutar tests
-make build    # Compilar ejecutable
+# Empieza el taller
+cat docs/TALLER.md
 ```
 
-### Windows (scripts .bat):
-
-```cmd
-scripts\deps.bat      # Instalar dependencias
-scripts\dev.bat       # 🔥 Ejecutar con hot reload
-scripts\run.bat       # Ejecutar servidor (sin hot reload)
-scripts\test.bat      # Ejecutar tests
-scripts\build.bat     # Compilar ejecutable
-scripts\help.bat      # Ver ayuda
-```
-
-## 🌟 Características Destacadas
-
-- ✅ Arquitectura hexagonal completa
-- ✅ Inyección de dependencias
-- ✅ Interfaces para testabilidad
-- ✅ Tests aislados (mocks)
-- ✅ Separación clara de responsabilidades
-- ✅ Código escalable y mantenible
-
+¡Buena suerte! 💪
