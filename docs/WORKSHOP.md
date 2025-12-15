@@ -29,6 +29,110 @@ Si todo funciona, ¡estás listo para empezar! 🎉
 
 ---
 
+## 📚 ENTENDIENDO EL FLUJO DE DESARROLLO
+
+Antes de empezar con los ejercicios, es importante entender el **orden cronológico** en el que creamos un endpoint:
+
+### 🔄 FLUJO CORRECTO: Ruta → Handler → Caso de Uso → Repositorio
+
+```
+1. RUTA (router.go)
+   ↓ "Quiero un endpoint /users"
+   
+2. HANDLER (handler/)
+   ↓ "Recibe la petición HTTP, extrae parámetros"
+   
+3. CASO DE USO (usecase/)
+   ↓ "Aplica lógica de negocio y validaciones"
+   
+4. REPOSITORIO (adapter/repository/)
+   ↓ "Obtiene los datos de APIs externas o BD"
+   
+5. DOMINIO (domain/)
+   "Define las estructuras de datos y contratos"
+```
+
+### ✅ ¿Por qué este orden?
+
+1. **Empezamos por la Ruta** porque primero definimos QUÉ queremos exponer
+2. **Creamos el Handler** que recibirá las peticiones HTTP
+3. **Creamos el Caso de Uso** con la lógica de negocio
+4. **Definimos el Repositorio** si necesitamos obtener datos
+5. **El Dominio** define las estructuras y contratos que todos usan
+
+### 📝 Tipos de Ejercicios
+
+**🟢 Ejercicios Básicos (1-8)**: Modificar código existente
+- Solo cambias valores o agregas validaciones
+- No creas archivos nuevos
+
+**🟡 Ejercicios Intermedios (9-30)**: Crear endpoints simples
+- Sigues el flujo: Ruta → Handler → Caso de Uso → Repositorio
+- Puedes reutilizar casos de uso existentes
+- Transformaciones en memoria (filtros, ordenamiento)
+
+**🔴 Ejercicios Avanzados (31-38)**: Endpoints complejos
+- Combinas múltiples casos de uso
+- Integras diferentes dominios
+- Lógica de negocio más compleja
+
+### 💡 Consejos para cada ejercicio
+
+1. **Lee TODO el ejercicio** antes de empezar a escribir código
+2. **Sigue los pasos en orden** - están numerados por una razón
+3. **No te saltes pasos** - cada uno construye sobre el anterior
+4. **Prueba frecuentemente** - reinicia el servidor después de cada cambio
+5. **Si algo falla**, revisa los pasos anteriores antes de continuar
+
+### 🎯 Ejemplo Visual del Flujo
+
+```go
+// 1. RUTA (comentada primero)
+// r.Get("/users", userHandler.List)
+
+// 2. HANDLER
+func (h *UserHandler) List(w http.ResponseWriter, r *http.Request) {
+    users, err := h.listUsersUsecase.Execute()  // Llama al caso de uso
+    // ... manejo de respuesta
+}
+
+// 3. CASO DE USO
+func (uc *ListUsersUsecase) Execute() ([]*User, error) {
+    return uc.repository.FindAll()  // Llama al repositorio
+}
+
+// 4. REPOSITORIO
+func (r *UserAPIRepository) FindAll() ([]*User, error) {
+    // Hace petición HTTP a API externa
+    // Devuelve los datos
+}
+
+// 5. DOMINIO (ya definido)
+type User struct {
+    ID    int    `json:"id"`
+    Name  string `json:"name"`
+    Email string `json:"email"`
+}
+```
+
+### ⚠️ IMPORTANTE: Antes de empezar
+
+- ✅ Asegúrate de entender el flujo Ruta → Handler → Caso de Uso → Repositorio
+- ✅ Lee cada ejercicio COMPLETO antes de escribir código
+- ✅ Sigue los pasos numerados en orden
+- ✅ Prueba después de cada paso importante
+- ✅ Si te atoras, revisa los pasos previos y el ejemplo del flujo arriba
+
+### 🆘 ¿Qué hacer si algo no funciona?
+
+1. **Revisa los mensajes de error** - Go te dice exactamente qué falta
+2. **Verifica imports** - ¿Importaste los paquetes necesarios?
+3. **Revisa nombres** - Go distingue mayúsculas/minúsculas
+4. **Reinicia el servidor** - Siempre necesario después de cambios
+5. **Compara con código existente** - Los ejercicios iniciales siguen patrones similares
+
+---
+
 ## EJERCICIO 1 - Cambiar el mensaje de bienvenida del ping
 
 ### 📋 LO QUE NECESITAMOS
@@ -323,43 +427,67 @@ Actualmente solo podemos ver un usuario a la vez con `/users/1`, `/users/2`, etc
 
 ### 🎯 INSTRUCCIONES
 
-**PARTE A: Actualizar el contrato del repositorio**
+**PASO 1: Registrar la ruta (Empezamos desde aquí)**
 
-1. Ve a: `internal/domain/user/`
-2. Abre el archivo `repository.go`
-3. Agrega un nuevo método: `FindAll() ([]*User, error)`
+1. Ve a: `internal/infrastructure/http/router.go`
+2. Busca donde está la ruta `/users/{id}`
+3. Arriba de esa línea, **comenta temporalmente** la nueva ruta que crearás:
+   ```go
+   // r.Get("/users", userHandler.List)
+   ```
+4. Esto te ayudará a recordar qué estás construyendo
 
-**PARTE B: Implementar la consulta**
+**PASO 2: Crear el método en el Handler**
 
-4. Ve a: `internal/adapter/repository/`
-5. Abre `user_api_repository.go`
-6. Crea el método `FindAll` que:
-   - Llame a la URL: `{baseURL}/users` (sin ID)
-   - Decodifique la respuesta en una lista de usuarios
+5. Ve a: `internal/adapter/http/handler/user_handler.go`
+6. Agrega un nuevo campo en la estructura del handler para el caso de uso:
+   ```go
+   listUsersUsecase *user.ListUsersUsecase
+   ```
+7. Actualiza el constructor para recibir este caso de uso
+8. Crea el método `List`:
+   - Llama al caso de uso
+   - Si hay error, devuelve 500
+   - Si todo bien, devuelve la lista en JSON
 
-**PARTE C: Crear la lógica de negocio**
+**PASO 3: Crear el Caso de Uso**
 
-7. Ve a: `internal/usecase/user/`
-8. Crea archivo nuevo: `list_users.go`
-9. Crea un caso de uso `ListUsersUsecase` que llame al método `FindAll` del repositorio
+9. Ve a: `internal/usecase/user/`
+10. Crea archivo nuevo: `list_users.go`
+11. Crea la estructura `ListUsersUsecase` que necesita el repositorio
+12. Crea el método `Execute()` que:
+    - Llama al repositorio para obtener todos los usuarios
+    - Devuelve la lista o el error
 
-**PARTE D: Exponer el endpoint**
+**PASO 4: Actualizar el contrato del Repositorio**
 
-10. Ve a: `internal/adapter/http/handler/`
-11. En `user_handler.go`, agrega el nuevo caso de uso a la estructura
-12. Crea un método `List` que llame al caso de uso y devuelva JSON
+13. Ve a: `internal/domain/user/repository.go`
+14. Agrega el método: `FindAll() ([]*User, error)`
 
-**PARTE E: Registrar la ruta**
+**PASO 5: Implementar en el Repositorio**
 
-13. Ve a: `internal/infrastructure/http/router.go`
-14. Crea el caso de uso de listar usuarios
-15. Pásalo al handler
-16. Registra la ruta: `r.Get("/users", userHandler.List)`
+15. Ve a: `internal/adapter/repository/user_api_repository.go`
+16. Implementa el método `FindAll`:
+    - Construye la URL: `{baseURL}/users` (sin ID)
+    - Haz la petición HTTP GET
+    - Decodifica la respuesta en un slice de usuarios
+    - Maneja los errores apropiadamente
 
-17. **Prueba**
-    - Reinicia el servidor
-    - Ejecuta: `curl http://localhost:8080/users`
-    - Debes ver una lista de 10 usuarios
+**PASO 6: Conectar todo en el Router**
+
+17. Vuelve a: `internal/infrastructure/http/router.go`
+18. Crea la instancia del caso de uso:
+    ```go
+    listUsersUsecase := user.NewListUsersUsecase(userRepo)
+    ```
+19. Pásalo al handler al crearlo
+20. Descomenta y activa la ruta: `r.Get("/users", userHandler.List)`
+
+**PASO 7: Prueba**
+
+21. Reinicia el servidor
+22. Ejecuta: `curl http://localhost:8080/users`
+23. Debes ver una lista de 10 usuarios
 
 ### ✅ RESULTADO ESPERADO
 
@@ -368,7 +496,7 @@ Actualmente solo podemos ver un usuario a la vez con `/users/1`, `/users/2`, etc
 
 ### 💡 LO QUE HICISTE
 
-Creaste un endpoint completo nuevo siguiendo todos los pasos de la arquitectura.
+Creaste un endpoint completo nuevo siguiendo el flujo natural: Ruta → Handler → Caso de Uso → Repositorio.
 
 ---
 
@@ -383,29 +511,50 @@ Cuando alguien entra a `http://localhost:8080/` queremos mostrar un mensaje de b
 
 ### 🎯 INSTRUCCIONES
 
-1. **Crea la estructura de datos**
-   - Crea carpeta: `internal/domain/welcome/`
-   - Crea archivo: `welcome.go`
-   - Define estructura con: `Message`, `Version`, `Endpoints` (lista)
+**PASO 1: Registrar la ruta**
 
-2. **Crea la lógica**
-   - Crea carpeta: `internal/usecase/welcome/`
-   - Crea archivo: `get_welcome.go`
-   - Devuelve:
-     - Message: "Bienvenido a la API de Ejercicio"
-     - Version: "1.1.0"
-     - Endpoints: ["/status", "/ping", "/users", "/users/{id}"]
+1. Ve a: `internal/infrastructure/http/router.go`
+2. Al inicio de las rutas, comenta temporalmente:
+   ```go
+   // r.Get("/", welcomeHandler.Get)
+   ```
 
-3. **Crea el punto de entrada**
-   - En `internal/adapter/http/handler/`
-   - Crea: `welcome_handler.go`
-   - Método que devuelva la información en JSON
+**PASO 2: Crear el Handler**
 
-4. **Registra la ruta**
-   - En el router, registra: `r.Get("/", welcomeHandler.Get)`
+3. En `internal/adapter/http/handler/`
+4. Crea archivo: `welcome_handler.go`
+5. Crea la estructura `WelcomeHandler` con el caso de uso
+6. Crea el método `Get` que:
+   - Llama al caso de uso
+   - Devuelve el resultado en JSON
 
-5. **Prueba**
-   - `curl http://localhost:8080/` → Debe mostrar la bienvenida
+**PASO 3: Crear el Caso de Uso**
+
+7. Crea carpeta: `internal/usecase/welcome/`
+8. Crea archivo: `get_welcome.go`
+9. Crea `GetWelcomeUsecase` que en su método `Execute()` devuelva:
+   - Message: "Bienvenido a la API de Ejercicio"
+   - Version: "1.1.0"
+   - Endpoints: ["/status", "/ping", "/users", "/users/{id}"]
+
+**PASO 4: Crear el Dominio**
+
+10. Crea carpeta: `internal/domain/welcome/`
+11. Crea archivo: `welcome.go`
+12. Define la estructura `Welcome` con: `Message`, `Version`, `Endpoints` (slice de strings)
+
+**PASO 5: Conectar en el Router**
+
+13. Vuelve a `router.go`
+14. Crea la instancia del caso de uso
+15. Crea el handler pasándole el caso de uso
+16. Activa la ruta: `r.Get("/", welcomeHandler.Get)`
+
+**PASO 6: Prueba**
+
+17. Reinicia el servidor
+18. Ejecuta: `curl http://localhost:8080/`
+19. Debe mostrar la bienvenida
 
 ### ✅ RESULTADO ESPERADO
 
@@ -419,7 +568,7 @@ Cuando alguien entra a `http://localhost:8080/` queremos mostrar un mensaje de b
 
 ### 💡 LO QUE HICISTE
 
-Creaste una página de inicio para la API que ayuda a los usuarios a descubrir los endpoints.
+Creaste un endpoint completo desde la ruta hasta el dominio, siguiendo el flujo natural de desarrollo.
 
 ---
 
@@ -461,34 +610,62 @@ Agregaste una métrica simple de uso del endpoint.
 
 ### 📋 LO QUE NECESITAMOS
 
-El equipo frontend hace dos llamadas separadas: una a `/users/1` y otra a `/status`. Para mejorar el rendimiento, necesitamos un nuevo endpoint `/user-info/1` que devuelva ambos datos en una sola respuesta.
+El equipo frontend hace dos llamadas separadas: una a `/users/1` y otra a `/status`. Para mejorar el rendimiento, necesitamos un nuevo endpoint `/user-info/{id}` que devuelva ambos datos en una sola respuesta.
 
 ### 🎯 INSTRUCCIONES
 
-1. **Crea la estructura combinada**
-   - Carpeta: `internal/domain/userinfo/`
-   - Archivo: `user_info.go`
-   - Campos: `User` y `ServerStatus`
+**PASO 1: Registrar la ruta**
 
-2. **Crea la lógica que combina**
-   - Carpeta: `internal/usecase/userinfo/`
-   - Archivo: `get_user_info.go`
-   - Este caso de uso necesita:
-     - El caso de uso de GetUser
-     - El caso de uso de GetStatus
-   - Llama a ambos y combina los resultados
+1. Ve a: `internal/infrastructure/http/router.go`
+2. Comenta temporalmente la nueva ruta:
+   ```go
+   // r.Get("/user-info/{id}", userInfoHandler.GetByID)
+   ```
 
-3. **Crea el handler**
-   - En `internal/adapter/http/handler/`
-   - Archivo: `user_info_handler.go`
-   - Extrae el ID, llama al caso de uso, devuelve JSON
+**PASO 2: Crear el Handler**
 
-4. **Registra la ruta**
-   - En router: `r.Get("/user-info/{id}", userInfoHandler.GetByID)`
+3. En `internal/adapter/http/handler/`
+4. Crea archivo: `user_info_handler.go`
+5. Crea `UserInfoHandler` que necesita el caso de uso
+6. Crea el método `GetByID`:
+   - Extrae el parámetro `id` de la URL
+   - Valida que sea un número
+   - Llama al caso de uso
+   - Devuelve el resultado en JSON
 
-5. **Prueba**
-   - `curl http://localhost:8080/user-info/1`
-   - Debe mostrar usuario + status en una respuesta
+**PASO 3: Crear el Caso de Uso**
+
+7. Crea carpeta: `internal/usecase/userinfo/`
+8. Crea archivo: `get_user_info.go`
+9. Crea `GetUserInfoUsecase` que necesita:
+   - El caso de uso de GetUser
+   - El caso de uso de GetStatus
+10. En el método `Execute(id int)`:
+    - Llama a getUserUsecase.Execute(id)
+    - Llama a getStatusUsecase.Execute()
+    - Combina ambos resultados
+    - Devuelve la estructura completa
+
+**PASO 4: Crear el Dominio**
+
+11. Crea carpeta: `internal/domain/userinfo/`
+12. Crea archivo: `user_info.go`
+13. Define `UserInfo` con dos campos:
+    - `User *user.User`
+    - `ServerStatus *status.Status`
+
+**PASO 5: Conectar en el Router**
+
+14. Vuelve a `router.go`
+15. Crea la instancia del caso de uso (pasándole los otros dos casos de uso)
+16. Crea el handler
+17. Activa la ruta: `r.Get("/user-info/{id}", userInfoHandler.GetByID)`
+
+**PASO 6: Prueba**
+
+18. Reinicia el servidor
+19. Ejecuta: `curl http://localhost:8080/user-info/1`
+20. Debe mostrar usuario + status en una respuesta
 
 ### ✅ RESULTADO ESPERADO
 
@@ -501,7 +678,7 @@ El equipo frontend hace dos llamadas separadas: una a `/users/1` y otra a `/stat
 
 ### 💡 LO QUE HICISTE
 
-Creaste un endpoint optimizado que reduce el número de peticiones del cliente.
+Creaste un endpoint optimizado que combina múltiples fuentes de datos, reduciendo las peticiones del cliente.
 
 ---
 
@@ -542,70 +719,1904 @@ Creaste una utilidad que se puede usar en múltiples lugares.
 
 El cliente quiere agregar productos a la aplicación. Necesitamos crear todo un módulo nuevo que se conecte a `https://fakestoreapi.com`:
 
-- Endpoint para obtener un producto: `/products/1`
+- Endpoint para obtener un producto: `/products/{id}`
 - Endpoint para listar productos: `/products`
 
 Un producto tiene: ID, Título, Precio, Descripción, Categoría.
 
 ### 🎯 INSTRUCCIONES
 
-**PARTE 1: Estructura de datos**
-1. Crea: `internal/domain/product/product.go` con los campos necesarios
-2. Crea: `internal/domain/product/repository.go` con los métodos FindByID y FindAll
+**PASO 1: Registrar las rutas**
 
-**PARTE 2: Conexión con API externa**
-3. Crea: `internal/adapter/repository/product_api_repository.go`
-4. Implementa los métodos usando URL: `https://fakestoreapi.com`
+1. Ve a: `internal/infrastructure/http/router.go`
+2. Comenta temporalmente:
+   ```go
+   // r.Get("/products", productHandler.List)
+   // r.Get("/products/{id}", productHandler.GetByID)
+   ```
 
-**PARTE 3: Lógica de negocio**
-5. Crea: `internal/usecase/product/get_product.go` (valida ID entre 1 y 20)
-6. Crea: `internal/usecase/product/list_products.go`
+**PASO 2: Crear el Handler**
 
-**PARTE 4: Endpoints HTTP**
-7. Crea: `internal/adapter/http/handler/product_handler.go`
-8. Métodos: GetByID y List
+3. En `internal/adapter/http/handler/`
+4. Crea: `product_handler.go`
+5. Crea `ProductHandler` con dos casos de uso (get y list)
+6. Implementa dos métodos:
+   - `GetByID`: extrae ID, valida, llama caso de uso
+   - `List`: llama caso de uso y devuelve lista
 
-**PARTE 5: Registro**
-9. En router, registra:
-   - `GET /products`
-   - `GET /products/{id}`
+**PASO 3: Crear el modelo de Dominio (datos que manejaremos)**
 
-**PARTE 6: Tests**
-10. Crea tests en: `test/usecase/product/`
+7. Crea carpeta: `internal/domain/product/`
+8. Crea archivo: `product.go`
+9. Define la estructura `Product` con estos campos:
+   - ID: tipo `int`, tag JSON `"id"`
+   - Title: tipo `string`, tag JSON `"title"`
+   - Price: tipo `float64`, tag JSON `"price"`
+   - Description: tipo `string`, tag JSON `"description"`
+   - Category: tipo `string`, tag JSON `"category"`
+   
+   💡 **Tip**: Revisa cómo está definido `User` en `internal/domain/user/user.go` para ver el formato
+
+**PASO 4: Definir el contrato del Repositorio (lo que necesitamos obtener)**
+
+10. En la misma carpeta `internal/domain/product/`
+11. Crea archivo: `repository.go`
+12. Define una interfaz llamada `Repository` con dos métodos:
+    - `FindByID(id int) (*Product, error)` - para obtener un producto
+    - `FindAll() ([]*Product, error)` - para obtener todos los productos
+    
+    💡 **Tip**: Revisa `internal/domain/user/repository.go` para ver el patrón
+
+**PASO 5: Crear los Casos de Uso (la lógica de negocio)**
+
+12. Crea carpeta: `internal/usecase/product/`
+13. Crea archivo: `get_product.go`
+    - Recibe el repositorio en el constructor
+    - Valida que el ID esté entre 1 y 20
+    - Llama a `repository.FindByID(id)`
+14. Crea archivo: `list_products.go`
+    - Recibe el repositorio en el constructor
+    - Llama a `repository.FindAll()`
+
+**PASO 6: Implementar el Repositorio (obtener datos de la API externa)**
+
+15. Ve a: `internal/adapter/repository/`
+16. Crea archivo: `product_api_repository.go`
+17. Implementa ambos métodos:
+    - `FindByID`: GET a `https://fakestoreapi.com/products/{id}`
+    - `FindAll`: GET a `https://fakestoreapi.com/products`
+    - Maneja errores apropiadamente (404, 500, etc.)
+
+**PASO 7: Conectar todo en el Router (montar la aplicación)**
+
+18. Vuelve a `router.go`
+19. Crea la instancia del repositorio de productos
+20. Crea las instancias de ambos casos de uso (pásales el repositorio)
+21. Crea la instancia del handler (pásale los casos de uso)
+22. Descomenta y activa las rutas
+
+**PASO 8: Prueba**
+
+22. Reinicia el servidor
+23. Prueba:
+    - `curl http://localhost:8080/products` → Lista
+    - `curl http://localhost:8080/products/1` → Un producto
+    - `curl http://localhost:8080/products/999` → Error de validación
 
 ### ✅ RESULTADO ESPERADO
 
-- `/products` → Lista de productos
+- `/products` → Lista de productos (20 productos)
 - `/products/1` → Un producto específico
-- `/products/999` → Error de validación
+- `/products/21` → Error: "el ID debe estar entre 1 y 20"
+- `/products/0` → Error: "el ID debe ser mayor que 0"
 
 ### 💡 LO QUE HICISTE
 
-Creaste un módulo completo nuevo desde cero, replicando la estructura existente.
+Creaste un módulo completo desde cero siguiendo el flujo correcto, ahora puedes replicar esta estructura para cualquier recurso nuevo.
 
 ---
 
-## 🎓 FELICIDADES
+## EJERCICIO 15 - Endpoint para buscar usuarios por email
 
-Has completado el taller completo. Ahora puedes:
+### 🏢 CONTEXTO DE NEGOCIO
 
-✅ Cambiar textos y valores en los endpoints
-✅ Agregar validaciones de datos
-✅ Agregar nuevos campos a las respuestas
-✅ Mejorar mensajes de error
-✅ Crear endpoints completamente nuevos
-✅ Combinar información de múltiples fuentes
-✅ Mantener contadores y métricas
-✅ Crear módulos completos siguiendo la arquitectura
+**Problema del cliente**:
+El equipo de soporte técnico recibe llamadas de usuarios que olvidaron su nombre de usuario. Solo recuerdan su email. El soporte necesita buscar rápidamente el perfil del usuario usando su email para poder ayudarlos.
+
+**Por qué es importante**:
+- **Soporte**: Reduce tiempo de atención de 5 minutos a 30 segundos
+- **Experiencia de usuario**: Usuario frustrado recibe ayuda inmediata
+- **Costos**: Menos tiempo = menos costo operativo
+
+**Caso de uso real**:
+1. Usuario llama: "No puedo entrar, olvidé mi nombre de usuario"
+2. Soporte pregunta: "¿Cuál es tu email registrado?"
+3. Soporte busca: `GET /users/search?email=usuario@example.com`
+4. Soporte encuentra el perfil y lo ayuda inmediatamente
+
+---
+
+### 🏛️ POR QUÉ CLEAN ARCHITECTURE EN ESTE EJERCICIO
+
+**Separación en capas** (de afuera hacia adentro):
+
+1. **Handler** (Adaptador HTTP)
+   - **Qué hace**: Recibe petición HTTP, extrae parámetros, devuelve respuesta HTTP
+   - **Por qué separado**: Si mañana cambiamos a gRPC o GraphQL, solo cambiamos esta capa
+   - **Beneficio**: La lógica de negocio no se contamina con detalles de HTTP
+
+2. **Use Case** (Lógica de Negocio)
+   - **Qué hace**: Implementa la regla "buscar usuario por email"
+   - **Por qué separado**: Es reutilizable desde HTTP, CLI, Workers, Tests
+   - **Beneficio**: Si lanzamos app móvil, reutilizamos este mismo caso de uso
+
+3. **Repository** (Puerto de Datos)
+   - **Qué hace**: Obtiene usuarios (ahora de API, mañana de BD)
+   - **Por qué separado**: Podemos cambiar de API a PostgreSQL sin tocar el Use Case
+   - **Beneficio**: Intercambiable y testeable con mocks
+
+**Ejemplo real de beneficio**:
+Si en 6 meses migramos de `jsonplaceholder` a nuestra BD:
+- ✅ Handler: No cambia
+- ✅ Use Case: No cambia
+- ❌ Repository: Solo este archivo cambia (de HTTP a SQL)
+
+Esfuerzo: 1 archivo vs reescribir todo.
+
+---
+
+### 📋 LO QUE NECESITAMOS
+
+**Endpoint**: `GET /users/search?email=ejemplo@dominio.com`
+
+**Entrada**:
+- Query parameter `email` (string, obligatorio)
+
+**Salida exitosa** (200):
+```json
+{
+  "id": 1,
+  "name": "Leanne Graham",
+  "email": "Sincere@april.biz",
+  ...
+}
+```
+
+**Errores**:
+- 400: Email vacío → `{"error": "el email es requerido"}`
+- 404: No encontrado → `{"error": "usuario no encontrado"}`
+
+---
+
+### ✅ VALIDACIONES OBLIGATORIAS
+
+#### 1. Validar email no vacío
+- **Dónde**: Handler (entrada) + Use Case (defensa)
+- **Por qué**: Evitar búsquedas innecesarias
+- **Si no se hace**: Llamada inútil al repositorio, error confuso
+- **Código**:
+  ```go
+  if email == "" {
+      http.Error(w, `{"error":"email requerido"}`, 400)
+      return
+  }
+  ```
+
+#### 2. Retornar 404 si no existe
+- **Dónde**: Use Case
+- **Por qué**: Semántica HTTP correcta
+- **Si no se hace**: Cliente no sabrá si es error de servidor o simplemente no existe
+- **Código**:
+  ```go
+  if usuarioEncontrado == nil {
+      return nil, errors.New("usuario no encontrado")
+  }
+  ```
+
+---
+
+### ⚠️ MALAS PRÁCTICAS A EVITAR
+
+#### ❌ MAL: Lógica de negocio en el Handler
+
+```go
+// ❌ NO HACER
+func (h *UserHandler) SearchByEmail(w http.ResponseWriter, r *http.Request) {
+    email := r.URL.Query().Get("email")
+    // ❌ Buscar directamente aquí
+    users, _ := h.repository.FindAll()
+    for _, user := range users {
+        if user.Email == email {
+            json.NewEncoder(w).Encode(user)
+            return
+        }
+    }
+}
+```
+
+**Problema**: No es reutilizable, no es testeable, mezcla responsabilidades.
+
+#### ✅ BIEN: Handler delgado
+
+```go
+// ✅ SÍ HACER
+func (h *UserHandler) SearchByEmail(w http.ResponseWriter, r *http.Request) {
+    email := r.URL.Query().Get("email")
+    if email == "" {
+        http.Error(w, `{"error":"email requerido"}`, 400)
+        return
+    }
+    // ✅ Delegar al caso de uso
+    user, err := h.searchUC.Execute(email)
+    if err != nil {
+        http.Error(w, `{"error":"no encontrado"}`, 404)
+        return
+    }
+    json.NewEncoder(w).Encode(user)
+}
+```
+
+#### ❌ MAL: Ignorar errores
+
+```go
+// ❌ NO HACER
+user, _ := h.searchUC.Execute(email)  // Ignora error
+json.NewEncoder(w).Encode(user)       // ¡user puede ser nil! → PANIC
+```
+
+**Consecuencia**: Aplicación se cae, usuario recibe "Internal Server Error".
+
+#### ✅ BIEN: Manejar errores
+
+```go
+// ✅ SÍ HACER
+user, err := h.searchUC.Execute(email)
+if err != nil {
+    http.Error(w, `{"error":"no encontrado"}`, 404)
+    return
+}
+json.NewEncoder(w).Encode(user)
+```
+
+---
+
+### 🎯 INSTRUCCIONES
+
+**PASO 1: Registrar la ruta**
+
+1. Ve a: `internal/infrastructure/http/router.go`
+2. Comenta temporalmente (importante: debe ir ANTES de `/users/{id}`):
+   ```go
+   // r.Get("/users/search", userHandler.SearchByEmail)
+   ```
+
+**PASO 2: Crear el método en el Handler**
+
+3. Ve a: `internal/adapter/http/handler/user_handler.go`
+4. Agrega el nuevo caso de uso a la estructura del handler
+5. Crea el método `SearchByEmail`:
+   - Obtiene el parámetro `email` de la query: `r.URL.Query().Get("email")`
+   - Valida que el email no esté vacío
+   - Llama al caso de uso
+   - Devuelve el usuario en JSON
+
+**PASO 3: Crear el Caso de Uso**
+
+6. En `internal/usecase/user/`
+7. Crea: `search_user_by_email.go`
+8. Implementa `SearchUserByEmailUsecase`:
+   - Valida que el email no esté vacío
+   - Llama al repositorio para obtener todos los usuarios
+   - Busca en la lista el usuario con ese email
+   - Si no encuentra, devuelve error "usuario no encontrado"
+
+**PASO 4: Conectar en el Router**
+
+9. Vuelve a `router.go`
+10. Crea el caso de uso (usa el mismo repositorio de usuarios)
+11. Pásalo al handler al crearlo
+12. Activa la ruta (asegúrate que esté ANTES de `/users/{id}`)
+
+**PASO 5: Prueba**
+
+13. Reinicia el servidor
+14. Prueba: `curl "http://localhost:8080/users/search?email=Sincere@april.biz"`
+15. Debe devolver el usuario con ID 1
+
+### ✅ RESULTADO ESPERADO
+
+- `/users/search?email=Sincere@april.biz` → Usuario encontrado
+- `/users/search?email=noexiste@test.com` → Error: "usuario no encontrado"
+- `/users/search` → Error: "email es requerido"
+
+### 💡 LO QUE APRENDISTE
+
+#### Conceptos Técnicos:
+- ✅ Query parameters en Go: `r.URL.Query().Get("param")`
+- ✅ Filtrado lineal en slices
+- ✅ Comparación case-insensitive: `strings.EqualFold()`
+- ✅ Códigos HTTP apropiados: 400 vs 404
+
+#### Conceptos Arquitectónicos:
+- ✅ **Separación de responsabilidades**: Handler (HTTP) ≠ Use Case (negocio)
+- ✅ **Reutilización**: El Use Case funciona desde HTTP, CLI, tests
+- ✅ **Defensa en profundidad**: Validar en Handler Y Use Case
+- ✅ **Inversión de dependencias**: Use Case no conoce HTTP
+
+#### Habilidades de Negocio:
+- ✅ Entender requisitos desde perspectiva del usuario final
+- ✅ Identificar validaciones y su impacto en experiencia
+- ✅ Documentar casos de uso reales
+
+**Este mismo patrón lo usarás para**: Buscar productos por nombre, buscar pedidos por tracking, cualquier búsqueda por criterio específico.
+
+---
+
+## EJERCICIO 16 - Endpoint para obtener solo el email de un usuario
+
+### 📋 LO QUE NECESITAMOS
+
+A veces solo necesitamos el email de un usuario, no toda su información. Crea un endpoint `/users/{id}/email` que devuelva únicamente el email.
+
+**NOTA**: Este ejercicio reutiliza el caso de uso existente de GetUser, solo crea una vista diferente de los datos.
+
+### 🎯 INSTRUCCIONES
+
+**PASO 1: Registrar la ruta**
+
+1. En `router.go`, comenta:
+   ```go
+   // r.Get("/users/{id}/email", userHandler.GetEmail)
+   ```
+
+**PASO 2: Crear estructura de respuesta (Dominio)**
+
+2. En `internal/domain/user/`
+3. Crea archivo: `user_email.go`
+4. Define estructura simple:
+   ```go
+   type UserEmail struct {
+       Email string `json:"email"`
+   }
+   ```
+
+**PASO 3: Crear el método en el Handler**
+
+5. En `user_handler.go`
+6. Crea método `GetEmail`:
+   - Extrae el ID del parámetro de ruta
+   - Convierte a int y valida
+   - Llama al caso de uso **existente** GetUser
+   - Extrae solo el email y créalo en una estructura UserEmail
+   - Devuelve en JSON
+
+**PASO 4: Conectar en el Router**
+
+7. En `router.go`
+8. Registra la ruta: `r.Get("/users/{id}/email", userHandler.GetEmail)`
+9. **NO necesitas crear nuevo caso de uso**, reutiliza el existente
+
+**PASO 5: Prueba**
+
+10. `curl http://localhost:8080/users/1/email`
+11. Debe mostrar: `{"email":"Sincere@april.biz"}`
+
+### ✅ RESULTADO ESPERADO
+
+- `/users/1/email` → Solo el email
+- `/users/999/email` → Error: "el ID debe estar entre 1 y 10"
+
+### 💡 LO QUE HICISTE
+
+Aprendiste a crear endpoints especializados que devuelven información parcial reutilizando casos de uso existentes.
+
+---
+
+## EJERCICIO 17 - Endpoint para buscar productos por categoría
+
+### 📋 LO QUE NECESITAMOS
+
+Queremos filtrar productos por categoría. Crea `/products/category/{category}` que devuelva todos los productos de esa categoría.
+
+### 🎯 INSTRUCCIONES
+
+**PASO 1: Registrar la ruta**
+
+1. En `router.go`, comenta:
+   ```go
+   // r.Get("/products/category/{category}", productHandler.GetByCategory)
+   ```
+
+**PASO 2: Crear el método en el Handler**
+
+2. En `product_handler.go`
+3. Agrega el nuevo caso de uso
+4. Crea método `GetByCategory`:
+   - Extrae el parámetro `category`
+   - Llama al caso de uso
+   - Devuelve la lista en JSON
+
+**PASO 3: Crear el Caso de Uso**
+
+5. En `internal/usecase/product/`
+6. Crea: `get_products_by_category.go`
+7. Implementa `GetProductsByCategoryUsecase`:
+   - Valida que la categoría no esté vacía
+   - Obtiene todos los productos del repositorio
+   - Filtra los que coincidan con la categoría (case-insensitive)
+   - Devuelve la lista filtrada
+
+**PASO 4: Conectar en el Router**
+
+8. Crea el caso de uso
+9. Pásalo al handler
+10. Activa la ruta
+
+**PASO 5: Prueba**
+
+11. `curl http://localhost:8080/products/category/electronics`
+12. Debe devolver solo productos electrónicos
+
+### ✅ RESULTADO ESPERADO
+
+- `/products/category/electronics` → Lista de productos electrónicos
+- `/products/category/jewelery` → Lista de joyas
+- `/products/category/noexiste` → Lista vacía `[]`
+
+### 💡 LO QUE HICISTE
+
+Implementaste filtrado de datos con parámetros de ruta.
+
+---
+
+## EJERCICIO 18 - Endpoint para productos con precio mayor a X
+
+### 📋 LO QUE NECESITAMOS
+
+El cliente quiere ver solo productos caros. Crea `/products/price-above?min=100` que devuelva productos con precio mayor al especificado.
+
+### 🎯 INSTRUCCIONES
+
+**PASO 1: Registrar la ruta**
+
+1. En `router.go`, comenta (debe ir ANTES de `/products/{id}`):
+   ```go
+   // r.Get("/products/price-above", productHandler.GetAbovePrice)
+   ```
+
+**PASO 2: Crear el método en el Handler**
+
+2. En `product_handler.go`
+3. Agrega el caso de uso
+4. Crea `GetAbovePrice`:
+   - Obtiene parámetro `min` de la query
+   - Convierte a float64
+   - Llama al caso de uso
+   - Devuelve lista en JSON
+
+**PASO 3: Crear el Caso de Uso**
+
+5. Crea: `internal/usecase/product/get_products_above_price.go`
+6. Implementa `GetProductsAbovePriceUsecase`:
+   - Valida que minPrice sea mayor que 0
+   - Obtiene todos los productos
+   - Filtra los que tengan precio >= minPrice
+   - Devuelve la lista
+
+**PASO 4: Conectar en el Router**
+
+7. Crea el caso de uso
+8. Pásalo al handler
+9. Activa la ruta
+
+**PASO 5: Prueba**
+
+10. `curl "http://localhost:8080/products/price-above?min=100"`
+11. Debe mostrar solo productos caros
+
+### ✅ RESULTADO ESPERADO
+
+- `/products/price-above?min=100` → Productos >= $100
+- `/products/price-above?min=1000` → Productos muy caros (o lista vacía)
+- `/products/price-above` → Error: "precio mínimo es requerido"
+
+### 💡 LO QUE HICISTE
+
+Combinaste query parameters con filtrado numérico.
+
+---
+
+## EJERCICIO 19 - Endpoint para filtrar usuarios por dominio de email
+
+### 📋 LO QUE NECESITAMOS
+
+El equipo de marketing quiere saber cuántos usuarios tenemos de cada dominio de email (gmail.com, outlook.com, etc.). Necesitamos `/users/by-domain?domain=gmail.com` que devuelva todos los usuarios de ese dominio.
+
+### 🎯 INSTRUCCIONES
+
+**PASO 1: Registrar la ruta**
+
+1. En `router.go`, comenta (debe ir ANTES de `/users/{id}`):
+   ```go
+   // r.Get("/users/by-domain", userHandler.GetByDomain)
+   ```
+
+**PASO 2: Crear el método en el Handler**
+
+2. En `user_handler.go`
+3. Crea método `GetByDomain`:
+   - Obtiene parámetro `domain` de la query
+   - Valida que no esté vacío
+   - Llama al caso de uso
+   - Devuelve lista de usuarios en JSON
+
+**PASO 3: Crear el Caso de Uso**
+
+4. En `internal/usecase/user/`
+5. Crea: `list_users_by_domain.go`
+6. Implementa `ListUsersByDomainUsecase`:
+   - Valida que el dominio no esté vacío
+   - Obtiene todos los usuarios del repositorio
+   - Filtra usuarios cuyo email termine con `@dominio`
+   - Tip: Usa `strings.HasSuffix(user.Email, "@"+domain)`
+   - Devuelve la lista filtrada
+
+**PASO 4: Conectar en el Router**
+
+7. Crea el caso de uso (usa el mismo repositorio)
+8. Pásalo al handler
+9. Activa la ruta
+
+**PASO 5: Prueba**
+
+10. `curl "http://localhost:8080/users/by-domain?domain=biz"` → Usuarios con email @biz
+11. `curl "http://localhost:8080/users/by-domain?domain=april.biz"` → Solo 1 usuario
+12. `curl "http://localhost:8080/users/by-domain?domain=noexiste.com"` → Lista vacía []
+
+### ✅ RESULTADO ESPERADO
+
+- `/users/by-domain?domain=biz` → Lista de usuarios con emails `@*.biz`
+- `/users/by-domain?domain=noexiste.com` → `[]` (lista vacía, no error)
+- `/users/by-domain` → Error: "dominio es requerido"
+
+### 💡 LO QUE HICISTE
+
+Practicaste filtrado con `strings.HasSuffix()` y manejo de resultados vacíos (no es error, es una lista válida sin elementos).
+
+---
+
+## EJERCICIO 20 - Endpoint para listar solo títulos de productos
+
+### 📋 LO QUE NECESITAMOS
+
+Para un dropdown en el frontend, necesitan `/products/titles` que devuelva una lista simple con solo los títulos de los productos, sin toda la información completa.
+
+### 🎯 INSTRUCCIONES
+
+**PASO 1: Registrar la ruta**
+
+1. En `router.go`, comenta (debe ir ANTES de `/products/{id}`):
+   ```go
+   // r.Get("/products/titles", productHandler.GetTitles)
+   ```
+
+**PASO 2: Crear estructura de respuesta**
+
+2. En `internal/domain/product/`
+3. Crea archivo: `product_title.go`
+4. Define `ProductTitle` con dos campos: `ID` (int) y `Title` (string)
+
+**PASO 3: Crear el método en el Handler**
+
+5. En `product_handler.go`
+6. Crea método `GetTitles`:
+   - Llama al caso de uso existente ListProducts
+   - Recorre todos los productos
+   - Crea una lista de ProductTitle solo con ID y título
+   - Devuelve la lista en JSON
+
+**PASO 4: Conectar en el Router**
+
+7. En `router.go`
+8. Registra la ruta (reutiliza el handler y caso de uso de ListProducts)
+
+**PASO 5: Prueba**
+
+9. `curl http://localhost:8080/products/titles`
+10. Debe mostrar lista simplificada
+
+### ✅ RESULTADO ESPERADO
+
+```json
+[
+  {"id": 1, "title": "Fjallraven - Foldsack No. 1 Backpack"},
+  {"id": 2, "title": "Mens Casual Premium Slim Fit T-Shirts"},
+  ...
+]
+```
+
+### 💡 LO QUE HICISTE
+
+Transformaste datos existentes para crear una vista simplificada, útil para optimizar respuestas del API.
+
+---
+
+## EJERCICIO 21 - Endpoint para contar productos por categoría
+
+### 📋 LO QUE NECESITAMOS
+
+El cliente quiere saber cuántos productos hay en cada categoría sin tener que traer todos los productos. Crea `/products/count-by-category` que devuelva un resumen.
+
+### 🎯 INSTRUCCIONES
+
+**PASO 1: Registrar la ruta**
+
+1. En `router.go`, comenta:
+   ```go
+   // r.Get("/products/count-by-category", productHandler.CountByCategory)
+   ```
+
+**PASO 2: Crear estructura de respuesta**
+
+2. En `internal/domain/product/`
+3. Crea archivo: `category_count.go`
+4. Define `CategoryCount` con: `Category` (string) y `Count` (int)
+
+**PASO 3: Crear el método en el Handler**
+
+5. En `product_handler.go`
+6. Crea método `CountByCategory`:
+   - Llama al caso de uso ListProducts
+   - Crea un mapa para contar: `map[string]int`
+   - Recorre productos y cuenta por categoría
+   - Convierte el mapa a una lista de CategoryCount
+   - Devuelve en JSON
+
+**PASO 4: Conectar en el Router**
+
+7. Registra la ruta (reutiliza caso de uso existente)
+
+**PASO 5: Prueba**
+
+8. `curl http://localhost:8080/products/count-by-category`
+
+### ✅ RESULTADO ESPERADO
+
+```json
+[
+  {"category": "electronics", "count": 6},
+  {"category": "jewelery", "count": 4},
+  {"category": "men's clothing", "count": 4},
+  {"category": "women's clothing", "count": 6}
+]
+```
+
+### 💡 LO QUE HICISTE
+
+Agregaste lógica de agregación simple en el handler, procesando datos en memoria para crear resúmenes.
+
+---
+
+## EJERCICIO 22 - Endpoint para buscar productos por título
+
+### 📋 LO QUE NECESITAMOS
+
+Necesitamos buscar productos por texto en el título. Crea `/products/search?query=shirt` que devuelva todos los productos cuyo título contenga esa palabra (sin distinguir mayúsculas).
+
+### 🎯 INSTRUCCIONES
+
+**PASO 1: Registrar la ruta**
+
+1. En `router.go`, comenta (debe ir ANTES de `/products/{id}`):
+   ```go
+   // r.Get("/products/search", productHandler.SearchByTitle)
+   ```
+
+**PASO 2: Crear el método en el Handler**
+
+2. En `product_handler.go`
+3. Crea método `SearchByTitle`:
+   - Obtiene parámetro `query` de la URL
+   - Valida que no esté vacío
+   - Llama al caso de uso
+   - Devuelve los resultados en JSON
+
+**PASO 3: Crear el Caso de Uso**
+
+4. En `internal/usecase/product/`
+5. Crea: `search_products_by_title.go`
+6. Implementa `SearchProductsByTitleUsecase`:
+   - Valida que query no esté vacío
+   - Obtiene todos los productos del repositorio
+   - Filtra los que contengan el texto en el título (usar `strings.Contains` y `strings.ToLower`)
+   - Devuelve la lista filtrada
+
+**PASO 4: Conectar en el Router**
+
+7. Crea el caso de uso (usa el mismo repositorio de productos)
+8. Pásalo al handler
+9. Activa la ruta
+
+**PASO 5: Prueba**
+
+10. `curl "http://localhost:8080/products/search?query=shirt"`
+11. Debe mostrar productos con "shirt" en el título
+
+### ✅ RESULTADO ESPERADO
+
+- `/products/search?query=shirt` → Productos con "shirt" en el título
+- `/products/search?query=jacket` → Productos con "jacket"
+- `/products/search` → Error: "query es requerida"
+- `/products/search?query=xyz` → Lista vacía `[]`
+
+### 💡 LO QUE HICISTE
+
+Implementaste búsqueda de texto básica, filtrando información en memoria de forma case-insensitive.
+
+---
+
+## EJERCICIO 23 - Endpoint para ordenar productos por precio ascendente
+
+### 📋 LO QUE NECESITAMOS
+
+Para el frontend de la tienda, necesitan mostrar productos del más barato al más caro. Crea `/products/by-price` que devuelva todos los productos ordenados por precio ascendente.
+
+### 🎯 INSTRUCCIONES
+
+**PASO 1: Registrar la ruta**
+
+1. En `router.go`, comenta (debe ir ANTES de `/products/{id}`):
+   ```go
+   // r.Get("/products/by-price", productHandler.GetByPrice)
+   ```
+
+**PASO 2: Crear el método en el Handler**
+
+2. En `product_handler.go`
+3. Crea método `GetByPrice`:
+   - Llama al caso de uso (no necesita parámetros)
+   - Devuelve lista ordenada en JSON
+
+**PASO 3: Crear el Caso de Uso**
+
+4. En `internal/usecase/product/`
+5. Crea: `list_products_by_price.go`
+6. Implementa `ListProductsByPriceUsecase`:
+   - Obtiene todos los productos del repositorio
+   - Usa `sort.Slice(products, func(i, j int) bool { ... })`
+   - Compara: `return products[i].Price < products[j].Price`
+   - Tip: Importa el package `sort`
+   - Devuelve la lista ordenada
+
+**PASO 4: Conectar en el Router**
+
+7. Crea el caso de uso (usa el mismo repositorio)
+8. Pásalo al handler
+9. Activa la ruta
+
+**PASO 5: Prueba**
+
+10. `curl http://localhost:8080/products/by-price`
+11. Verifica que el primero sea el más barato y el último el más caro
+
+### ✅ RESULTADO ESPERADO
+
+Lista de productos ordenada del menor al mayor precio.
+
+### 💡 LO QUE HICISTE
+
+Aprendiste a usar `sort.Slice()` para ordenar estructuras personalizadas por un campo específico.
+
+---
+
+## EJERCICIO 24 - Endpoint para listar productos ordenados por precio
+
+### 📋 LO QUE NECESITAMOS
+
+Crea `/products/sorted-by-price` que devuelva todos los productos ordenados de menor a mayor precio.
+
+### 🎯 INSTRUCCIONES
+
+**PASO 1: Registrar la ruta**
+
+1. En `router.go`, comenta (debe ir ANTES de `/products/{id}`):
+   ```go
+   // r.Get("/products/sorted-by-price", productHandler.GetSortedByPrice)
+   ```
+
+**PASO 2: Crear el método en el Handler**
+
+2. En `product_handler.go`
+3. Crea método `GetSortedByPrice`:
+   - Llama al caso de uso ListProducts
+   - Ordena los productos por precio usando `sort.Slice`
+   - Devuelve la lista ordenada
+
+**PASO 3: Conectar y Probar**
+
+4. Registra la ruta (reutiliza caso de uso ListProducts)
+5. `curl http://localhost:8080/products/sorted-by-price`
+
+### ✅ RESULTADO ESPERADO
+
+Lista de productos ordenada del más barato al más caro.
+
+### 💡 LO QUE HICISTE
+
+Aplicaste ordenamiento a una colección de datos antes de devolverla.
+
+---
+
+## EJERCICIO 25 - Endpoint para combinar filtros de categoría y precio
+
+### 📋 LO QUE NECESITAMOS
+
+El frontend de la tienda necesita filtrar productos por categoría Y por precio mínimo al mismo tiempo. Crea `/products/filter?category=electronics&minPrice=100` que combine ambos filtros.
+
+### 🎯 INSTRUCCIONES
+
+**PASO 1: Registrar la ruta**
+
+1. En `router.go`, comenta (debe ir ANTES de `/products/{id}`):
+   ```go
+   // r.Get("/products/filter", productHandler.GetFiltered)
+   ```
+
+**PASO 2: Crear el método en el Handler**
+
+2. En `product_handler.go`
+3. Crea método `GetFiltered`:
+   - Obtiene `category` (string) de la query
+   - Obtiene `minPrice` (string) de la query, conviértelo a float64 con `strconv.ParseFloat()`
+   - Llama al caso de uso con ambos parámetros
+   - Devuelve lista filtrada
+
+**PASO 3: Crear el Caso de Uso**
+
+4. En `internal/usecase/product/`
+5. Crea: `filter_products.go`
+6. Implementa `FilterProductsUsecase`:
+   - Recibe category (string) y minPrice (float64)
+   - Obtiene todos los productos
+   - Filtra en dos pasos:
+     - Primero por categoría (si category no está vacío)
+     - Luego por precio >= minPrice (si minPrice > 0)
+   - Devuelve productos que cumplen AMBOS criterios
+
+**PASO 4: Conectar en el Router**
+
+7. Crea el caso de uso (usa el mismo repositorio)
+8. Pásalo al handler
+9. Activa la ruta
+
+**PASO 5: Prueba**
+
+10. `curl "http://localhost:8080/products/filter?category=electronics&minPrice=100"`
+11. Verifica que todos sean electrónicos Y tengan precio >= 100
+
+### ✅ RESULTADO ESPERADO
+
+Lista de productos que cumplen ambos filtros simultáneamente.
+
+### 💡 LO QUE HICISTE
+
+Practicaste combinar múltiples filtros en secuencia, un patrón común en búsquedas avanzadas.
+
+---
+
+## EJERCICIO 26 - Endpoint para encontrar el producto más barato
+
+### 📋 LO QUE NECESITAMOS
+
+Para promociones, necesitamos saber cuál es el producto más barato de la tienda. Crea `/products/cheapest` que devuelva el producto con el precio más bajo.
+
+### 🎯 INSTRUCCIONES
+
+**PASO 1: Registrar la ruta**
+
+1. En `router.go`, comenta:
+   ```go
+   // r.Get("/products/cheapest", productHandler.GetCheapest)
+   ```
+
+**PASO 2: Crear el método en el Handler**
+
+2. En `product_handler.go`
+3. Crea método `GetCheapest`:
+   - Llama al caso de uso
+   - Devuelve el producto en JSON
+
+**PASO 3: Crear el Caso de Uso**
+
+4. En `internal/usecase/product/`
+5. Crea: `get_cheapest_product.go`
+6. Implementa `GetCheapestProductUsecase`:
+   - Obtiene todos los productos
+   - Inicializa una variable `cheapest` con el primer producto
+   - Recorre todos los productos
+   - Si encuentra uno con precio menor, actualiza `cheapest`
+   - Devuelve el producto más barato
+
+**PASO 4: Conectar en el Router**
+
+7. Crea el caso de uso (usa el mismo repositorio)
+8. Pásalo al handler
+9. Activa la ruta
+
+**PASO 5: Prueba**
+
+10. `curl http://localhost:8080/products/cheapest`
+11. Verifica que sea el producto con el precio más bajo
+
+### ✅ RESULTADO ESPERADO
+
+El producto con el precio más bajo de todos.
+
+### 💡 LO QUE HICISTE
+
+Aprendiste a buscar el elemento con el valor mínimo en una colección.
+
+---
+
+## EJERCICIO 27 - Endpoint para filtrar productos por rango de precio
+
+### 📋 LO QUE NECESITAMOS
+
+Para filtros avanzados, necesitamos buscar productos dentro de un rango de precio. Crea `/products/in-range?min=50&max=150` que devuelva productos entre esos precios (inclusive).
+
+### 🎯 INSTRUCCIONES
+
+**PASO 1: Registrar la ruta**
+
+1. En `router.go`, comenta (debe ir ANTES de `/products/{id}`):
+   ```go
+   // r.Get("/products/in-range", productHandler.GetInRange)
+   ```
+
+**PASO 2: Crear el método en el Handler**
+
+2. En `product_handler.go`
+3. Crea método `GetInRange`:
+   - Obtiene `min` y `max` de la query
+   - Convierte ambos a float64
+   - Valida que min < max
+   - Llama al caso de uso
+   - Devuelve lista filtrada
+
+**PASO 3: Crear el Caso de Uso**
+
+4. En `internal/usecase/product/`
+5. Crea: `list_products_in_range.go`
+6. Implementa `ListProductsInRangeUsecase`:
+   - Valida que min <= max
+   - Obtiene todos los productos
+   - Filtra productos donde: `price >= min AND price <= max`
+   - Devuelve lista filtrada
+
+**PASO 4: Conectar en el Router**
+
+7. Crea el caso de uso (usa el mismo repositorio)
+8. Pásalo al handler
+9. Activa la ruta
+
+**PASO 5: Prueba**
+
+10. `curl "http://localhost:8080/products/in-range?min=50&max=150"`
+11. Verifica que todos estén entre 50 y 150
+
+### ✅ RESULTADO ESPERADO
+
+Lista de productos con precio entre min y max (inclusive).
+
+### 💡 LO QUE HICISTE
+
+Practicaste filtrado con rangos numéricos y validaciones de lógica de negocio (min < max).
+
+---
+
+## EJERCICIO 28 - Endpoint para obtener ciudad de un usuario
+
+### 📋 LO QUE NECESITAMOS
+
+Para estadísticas geográficas, necesitamos extraer la ciudad donde vive un usuario. Crea `/users/{id}/city` que devuelva solo la ciudad.
+
+### 🎯 INSTRUCCIONES
+
+**PASO 1: Registrar la ruta**
+
+1. En `router.go`, comenta:
+   ```go
+   // r.Get("/users/{id}/city", userHandler.GetCity)
+   ```
+
+**PASO 2: Crear estructura de respuesta**
+
+2. En `internal/domain/user/`
+3. Crea archivo: `user_city.go`
+4. Define estructura `UserCity` con un campo: `City string`
+
+**PASO 3: Crear el método en el Handler**
+
+5. En `user_handler.go`
+6. Crea método `GetCity`:
+   - Extrae el ID del path parameter
+   - Valida y convierte a int
+   - Llama al caso de uso GetUser (reutiliza el existente)
+   - Accede a la ciudad: `user.Address.City`
+   - Crea estructura UserCity con esa ciudad
+   - Devuelve en JSON
+
+**PASO 4: Conectar en el Router**
+
+7. Registra la ruta (reutiliza el handler y caso de uso existente)
+
+**PASO 5: Prueba**
+
+8. `curl http://localhost:8080/users/1/city`
+9. Debe mostrar solo: `{"city": "Gwenborough"}`
+
+### ✅ RESULTADO ESPERADO
+
+- `/users/1/city` → `{"city": "Gwenborough"}`
+- `/users/999/city` → Error 404
+
+### 💡 LO QUE HICISTE
+
+Aprendiste a acceder a datos anidados (`user.Address.City`) y crear respuestas parciales reutilizando lógica existente.
+
+---
+
+## EJERCICIO 29 - Endpoint para filtrar productos por rango de precio
+
+### 📋 LO QUE NECESITAMOS
+
+Crea `/products/price-range?min=50&max=200` que devuelva productos dentro de ese rango.
+
+### 🎯 INSTRUCCIONES
+
+**PASO 1: Registrar la ruta**
+
+1. En `router.go`, comenta:
+   ```go
+   // r.Get("/products/price-range", productHandler.GetByPriceRange)
+   ```
+
+**PASO 2: Crear el método en el Handler**
+
+2. En `product_handler.go`
+3. Crea método `GetByPriceRange`:
+   - Obtiene parámetros `min` y `max` de la query
+   - Convierte a float64
+   - Valida que min < max
+   - Llama al caso de uso
+
+**PASO 3: Crear el Caso de Uso**
+
+4. En `internal/usecase/product/`
+5. Crea: `get_products_by_price_range.go`
+6. Implementa el filtrado:
+   - Obtiene todos los productos
+   - Filtra los que estén entre min y max
+   - Devuelve la lista
+
+**PASO 4: Conectar y Probar**
+
+7. `curl "http://localhost:8080/products/price-range?min=50&max=200"`
+
+### ✅ RESULTADO ESPERADO
+
+Lista de productos entre $50 y $200.
+
+### 💡 LO QUE HICISTE
+
+Implementaste filtrado con dos parámetros simultáneos.
+
+---
+
+## EJERCICIO 30 - Endpoint para listar categorías únicas
+
+### 📋 LO QUE NECESITAMOS
+
+Crea `/products/categories` que devuelva una lista de todas las categorías únicas disponibles.
+
+### 🎯 INSTRUCCIONES
+
+**PASO 1: Registrar la ruta**
+
+1. En `router.go`, comenta:
+   ```go
+   // r.Get("/products/categories", productHandler.GetCategories)
+   ```
+
+**PASO 2: Crear estructura de respuesta**
+
+2. En `internal/domain/product/`
+3. Crea: `category_list.go`
+4. Define `CategoryList` con: `Categories []string`
+
+**PASO 3: Crear el método en el Handler**
+
+5. En `product_handler.go`
+6. Crea método `GetCategories`:
+   - Llama a ListProducts
+   - Crea un map para almacenar categorías únicas
+   - Recorre productos y agrega categorías al map
+   - Convierte map a slice
+   - Devuelve la lista
+
+**PASO 4: Conectar y Probar**
+
+7. `curl http://localhost:8080/products/categories`
+
+### ✅ RESULTADO ESPERADO
+
+```json
+{
+  "categories": [
+    "electronics",
+    "jewelery",
+    "men's clothing",
+    "women's clothing"
+  ]
+}
+```
+
+### 💡 LO QUE HICISTE
+
+Extrajiste valores únicos de una colección usando un mapa.
+
+---
+
+## 🔥 NIVEL AVANZADO - Endpoints Complejos
+
+A partir de aquí, los ejercicios combinan múltiples fuentes de datos y requieren más planificación.
+
+---
+
+## EJERCICIO 31 - Endpoint de estadísticas de usuarios y productos
+
+### 📋 LO QUE NECESITAMOS
+
+Para el dashboard, necesitamos `/stats` que muestre:
+- Total de usuarios disponibles
+- Total de productos disponibles
+- Categorías de productos únicas
+- Tiempo de respuesta promedio estimado
+
+**NOTA**: Este es tu primer ejercicio que combina MÚLTIPLES casos de uso.
+
+### 🎯 INSTRUCCIONES
+
+**PASO 1: Registrar la ruta**
+
+1. En `router.go`, comenta:
+   ```go
+   // r.Get("/stats", statsHandler.Get)
+   ```
+
+**PASO 2: Crear el Handler**
+
+2. Crea: `internal/adapter/http/handler/stats_handler.go`
+3. Define `StatsHandler` con el caso de uso
+4. Implementa `Get` que llame al caso de uso y devuelva JSON
+
+**PASO 3: Crear el Caso de Uso (¡IMPORTANTE!)**
+
+5. Crea carpeta: `internal/usecase/stats/`
+6. Crea: `get_stats.go`
+7. Implementa `GetStatsUsecase` que **necesita DOS casos de uso**:
+   - El caso de uso ListUsers
+   - El caso de uso ListProducts
+8. En `Execute()`:
+   - Obtiene todos los usuarios y cuenta cuántos son
+   - Obtiene todos los productos y cuenta cuántos son
+   - Extrae las categorías únicas de los productos
+   - Devuelve las estadísticas
+
+**PASO 4: Crear el Dominio**
+
+9. Crea carpeta: `internal/domain/stats/`
+10. Crea: `stats.go`
+11. Define `Stats` con:
+    - TotalUsers (int)
+    - TotalProducts (int)
+    - Categories ([]string)
+    - ResponseTime (string) - fijo: "~500ms"
+
+**PASO 5: Conectar en el Router**
+
+12. Crea el caso de uso (pásale los casos de uso de users y products)
+13. Crea el handler
+14. Activa la ruta
+
+**PASO 6: Prueba**
+
+15. `curl http://localhost:8080/stats`
+
+### ✅ RESULTADO ESPERADO
+
+```json
+{
+  "total_users": 10,
+  "total_products": 20,
+  "categories": ["electronics", "jewelery", "men's clothing", "women's clothing"],
+  "response_time": "~500ms"
+}
+```
+
+### 💡 LO QUE HICISTE
+
+**¡Primer endpoint avanzado!** Combinaste múltiples fuentes de datos usando varios casos de uso juntos.
+
+---
+
+## EJERCICIO 32 - Endpoint de perfil completo de usuario
+
+### 📋 LO QUE NECESITAMOS
+
+Crea un endpoint `/users/{id}/profile` que devuelva:
+- Información completa del usuario
+- Total de usuarios en el sistema (para mostrar "Usuario X de Y")
+- Un mensaje personalizado: "Perfil de [nombre]"
+
+### 🎯 INSTRUCCIONES
+
+**PASO 1: Registrar la ruta**
+
+1. En `router.go`, comenta:
+   ```go
+   // r.Get("/users/{id}/profile", userProfileHandler.Get)
+   ```
+
+**PASO 2: Crear el Handler**
+
+2. Crea: `internal/adapter/http/handler/user_profile_handler.go`
+3. Implementa el handler con extracción de ID y llamada al caso de uso
+
+**PASO 3: Crear el Caso de Uso**
+
+4. Crea carpeta: `internal/usecase/userprofile/`
+5. Crea: `get_user_profile.go`
+6. Necesita los casos de uso GetUser y ListUsers
+7. En `Execute(id)`:
+   - Obtiene el usuario por ID
+   - Obtiene todos los usuarios y cuenta el total
+   - Crea el mensaje personalizado
+   - Devuelve la estructura completa
+
+**PASO 4: Crear el Dominio**
+
+8. Crea carpeta: `internal/domain/userprofile/`
+9. Crea: `user_profile.go`
+10. Define con:
+    - User (*user.User)
+    - TotalUsers (int)
+    - Message (string)
+
+**PASO 5: Conectar en el Router**
+
+11. Crea caso de uso, handler y ruta
+
+**PASO 6: Prueba**
+
+12. `curl http://localhost:8080/users/1/profile`
+
+### ✅ RESULTADO ESPERADO
+
+```json
+{
+  "user": { "id": 1, "name": "Leanne Graham", ... },
+  "total_users": 10,
+  "message": "Perfil de Leanne Graham"
+}
+```
+
+### 💡 LO QUE HICISTE
+
+Combinaste datos de múltiples fuentes y agregaste lógica de presentación personalizada.
+
+---
+
+## EJERCICIO 33 - Endpoint de salud detallado (health check)
+
+### 📋 LO QUE NECESITAMOS
+
+Para monitoreo, crea `/health` que verifique:
+- Si la API de usuarios responde (intenta obtener usuario 1)
+- Si la API de productos responde (intenta obtener producto 1)
+- Estado general: "healthy" si ambos funcionan, "degraded" si falla uno, "unhealthy" si fallan ambos
+
+### 🎯 INSTRUCCIONES
+
+**PASO 1: Registrar la ruta**
+
+1. En `router.go`, comenta:
+   ```go
+   // r.Get("/health", healthHandler.Check)
+   ```
+
+**PASO 2: Crear el Handler**
+
+2. Crea: `internal/adapter/http/handler/health_handler.go`
+3. Implementa el handler que llame al caso de uso
+
+**PASO 3: Crear el Caso de Uso**
+
+4. Crea carpeta: `internal/usecase/health/`
+5. Crea: `check_health.go`
+6. Necesita ambos repositorios (user y product)
+7. En `Execute()`:
+   - Intenta hacer FindByID(1) en el repo de usuarios
+   - Intenta hacer FindByID(1) en el repo de productos
+   - Determina el estado según los resultados
+   - No devuelve error, siempre devuelve la estructura
+
+**PASO 4: Crear el Dominio**
+
+8. Crea carpeta: `internal/domain/health/`
+9. Crea: `health.go`
+10. Define con:
+    - Status (string): "healthy", "degraded", "unhealthy"
+    - UsersAPI (bool)
+    - ProductsAPI (bool)
+    - Timestamp (string)
+
+**PASO 5: Conectar en el Router**
+
+11. Crea caso de uso (pásale ambos repositorios)
+12. Crea handler y ruta
+
+**PASO 6: Prueba**
+
+13. `curl http://localhost:8080/health`
+
+### ✅ RESULTADO ESPERADO
+
+```json
+{
+  "status": "healthy",
+  "users_api": true,
+  "products_api": true,
+  "timestamp": "2025-12-15T10:30:00Z"
+}
+```
+
+### 💡 LO QUE HICISTE
+
+Implementaste un health check que verifica dependencias externas, útil para sistemas de monitoreo.
+
+---
+
+## EJERCICIO 34 - Endpoint de resumen ejecutivo completo
+
+### 📋 LO QUE NECESITAMOS
+
+Crea `/summary` que devuelva un resumen ejecutivo de toda la API:
+- Mensaje de bienvenida
+- Versión
+- Total de recursos (usuarios + productos)
+- Estado de salud
+- Endpoints disponibles
+- Última actualización (timestamp)
+
+### 🎯 INSTRUCCIONES
+
+**PASO 1: Registrar la ruta**
+
+1. En `router.go`, comenta: `// r.Get("/summary", summaryHandler.Get)`
+
+**PASO 2: Crear el Handler**
+
+2. Crea: `internal/adapter/http/handler/summary_handler.go`
+3. Implementa con el caso de uso
+
+**PASO 3: Crear el Caso de Uso**
+
+4. Crea carpeta: `internal/usecase/summary/`
+5. Crea: `get_summary.go`
+6. Necesita múltiples casos de uso:
+   - GetStatus
+   - ListUsers
+   - ListProducts
+   - GetWelcome (o crea el mensaje aquí)
+7. Combina toda la información en una estructura
+
+**PASO 4: Crear el Dominio**
+
+8. Crea carpeta: `internal/domain/summary/`
+9. Crea: `summary.go`
+10. Define todos los campos necesarios:
+    - Message (string)
+    - Version (string)
+    - TotalResources (int)
+    - HealthStatus (string)
+    - AvailableEndpoints ([]string)
+    - Timestamp (string)
+
+**PASO 5: Conectar en el Router y Probar**
+
+11. Crea todas las instancias necesarias
+12. Activa la ruta
+13. Prueba: `curl http://localhost:8080/summary`
+
+### ✅ RESULTADO ESPERADO
+
+```json
+{
+  "message": "Bienvenido a la API de Ejercicio",
+  "version": "1.1.0",
+  "total_resources": 30,
+  "health_status": "healthy",
+  "available_endpoints": ["/status", "/ping", "/users", "/products", ...],
+  "timestamp": "2025-12-15T10:30:00Z"
+}
+```
+
+### 💡 LO QUE HICISTE
+
+Creaste un endpoint complejo que agrega información de múltiples fuentes, perfecto para dashboards o documentación dinámica.
+
+---
+
+## EJERCICIO 35 - Endpoint para recomendaciones de productos por usuario
+
+### 📋 LO QUE NECESITAMOS
+
+Aunque no tenemos productos por usuario en las APIs, simularemos esta funcionalidad. Crea `/users/{id}/recommended-products` que devuelva:
+- Información del usuario
+- 3 productos aleatorios recomendados para ese usuario
+
+### 🎯 INSTRUCCIONES
+
+**PASO 1: Registrar la ruta**
+
+1. En `router.go`, comenta:
+   ```go
+   // r.Get("/users/{id}/recommended-products", userProductsHandler.GetRecommended)
+   ```
+
+**PASO 2: Crear el Handler**
+
+2. Crea: `internal/adapter/http/handler/user_products_handler.go`
+3. Extrae el ID, valida y llama al caso de uso
+
+**PASO 3: Crear el Caso de Uso**
+
+4. Crea carpeta: `internal/usecase/userproducts/`
+5. Crea: `get_recommended_products.go`
+6. Necesita: GetUserUsecase y ListProductsUsecase
+7. En `Execute(id)`:
+   - Obtiene el usuario
+   - Obtiene todos los productos
+   - Selecciona 3 productos aleatorios (usa `rand.Intn`)
+   - Combina en la estructura de respuesta
+
+**PASO 4: Crear el Dominio**
+
+8. Crea carpeta: `internal/domain/userproducts/`
+9. Crea: `user_recommendations.go`
+10. Define con:
+    - User (*user.User)
+    - RecommendedProducts ([]*product.Product)
+    - RecommendationReason (string) - fijo: "Basado en tus preferencias"
+
+**PASO 5: Conectar y Probar**
+
+11. Conecta todo en el router
+12. Prueba: `curl http://localhost:8080/users/1/recommended-products`
+
+### ✅ RESULTADO ESPERADO
+
+El usuario con 3 productos aleatorios cada vez que llames.
+
+### 💡 LO QUE HICISTE
+
+Combinaste datos de diferentes dominios para crear una funcionalidad nueva y más compleja.
+
+---
+
+## EJERCICIO 36 - Endpoint de comparación de productos
+
+### 📋 LO QUE NECESITAMOS
+
+Crea `/products/compare?ids=1,2,3` que permita comparar varios productos lado a lado.
+
+### 🎯 INSTRUCCIONES
+
+**PASO 1: Registrar la ruta**
+
+1. En `router.go`, comenta:
+   ```go
+   // r.Get("/products/compare", productHandler.Compare)
+   ```
+
+**PASO 2: Crear el método en el Handler**
+
+2. En `product_handler.go`
+3. Crea método `Compare`:
+   - Obtiene el parámetro `ids` (string: "1,2,3")
+   - Separa por comas y convierte a integers
+   - Valida que haya entre 2 y 4 productos
+   - Llama al caso de uso
+   - Devuelve JSON
+
+**PASO 3: Crear el Caso de Uso**
+
+4. En `internal/usecase/product/`
+5. Crea: `compare_products.go`
+6. Implementa `CompareProductsUsecase`:
+   - Recibe una lista de IDs
+   - Obtiene cada producto usando el repositorio
+   - Calcula el precio promedio
+   - Identifica el más barato y el más caro
+   - Devuelve la estructura de comparación
+
+**PASO 4: Crear el Dominio**
+
+7. En `internal/domain/product/`
+8. Crea: `product_comparison.go`
+9. Define con:
+    - Products ([]*Product)
+    - AveragePrice (float64)
+    - CheapestID (int)
+    - MostExpensiveID (int)
+
+**PASO 5: Conectar y Probar**
+
+10. `curl "http://localhost:8080/products/compare?ids=1,2,3"`
+
+### ✅ RESULTADO ESPERADO
+
+```json
+{
+  "products": [...],
+  "average_price": 150.50,
+  "cheapest_id": 2,
+  "most_expensive_id": 1
+}
+```
+
+### 💡 LO QUE HICISTE
+
+Procesaste múltiples entidades y calculaste métricas agregadas sobre ellas.
+
+---
+
+## EJERCICIO 37 - Endpoint de dashboard principal
+
+### 📋 LO QUE NECESITAMOS
+
+Crea `/dashboard` que sea el endpoint principal de monitoreo con:
+- Estado de salud
+- Estadísticas generales
+- Top 3 productos más caros
+- Usuario con ID más alto
+- Timestamp
+
+### 🎯 INSTRUCCIONES
+
+**PASO 1-5: Sigue la estructura habitual**
+
+1. Registra la ruta
+2. Crea el handler
+3. Crea el caso de uso que combine:
+   - GetHealth (reutiliza el del ejercicio 33)
+   - GetStats (reutiliza el del ejercicio 31)
+   - ListProducts (para obtener top 3)
+   - ListUsers (para obtener el último)
+4. Crea el dominio con todos los campos
+5. Conecta y prueba
+
+### 💡 LO QUE HICISTE
+
+Creaste un endpoint de dashboard completo que agrega información crítica de múltiples fuentes.
+
+---
+
+## EJERCICIO 38 - Endpoint de búsqueda global
+
+### 📋 LO QUE NECESITAMOS
+
+Crea `/search?q=john` que busque en AMBOS recursos (usuarios y productos) y devuelva resultados combinados.
+
+### 🎯 INSTRUCCIONES
+
+**PASO 1: Registrar la ruta**
+
+1. Comenta: `// r.Get("/search", globalSearchHandler.Search)`
+
+**PASO 2-4: Implementa la búsqueda**
+
+2. Crea handler que extraiga el parámetro `q`
+3. Crea caso de uso que:
+   - Busque en usuarios (por nombre, email, username)
+   - Busque en productos (por título, descripción)
+   - Combine ambos resultados
+4. Crea dominio:
+   - MatchedUsers ([]*User)
+   - MatchedProducts ([]*Product)
+   - TotalResults (int)
+   - SearchTerm (string)
+
+**PASO 5: Prueba**
+
+5. `curl "http://localhost:8080/search?q=shirt"`
+
+### ✅ RESULTADO ESPERADO
+
+```json
+{
+  "search_term": "shirt",
+  "matched_users": [],
+  "matched_products": [productos con "shirt"],
+  "total_results": 3
+}
+```
+
+### 💡 LO QUE HICISTE
+
+Implementaste búsqueda global que combina múltiples recursos, simulando un endpoint de búsqueda real y complejo.
+
+---
+
+## 🎓 FELICIDADES - HAS COMPLETADO EL TALLER
+
+Has completado **38 ejercicios progresivos** de desarrollo de APIs REST. Ahora dominas:
+
+### 📝 NIVEL BÁSICO (Ejercicios 1-8)
+✅ Cambiar textos y valores en endpoints existentes
+✅ Agregar validaciones de datos (IDs, rangos, tipos)
+✅ Agregar nuevos campos a estructuras existentes
+✅ Mejorar mensajes de error específicos por código HTTP
+
+### 🏗️ NIVEL INTERMEDIO (Ejercicios 9-30)
+✅ Crear endpoints completos desde cero siguiendo el flujo correcto
+✅ Crear módulos completos (productos) con todas las capas
+✅ Implementar búsquedas con query parameters
+✅ Crear endpoints especializados (transformaciones parciales)
+✅ Filtrar datos por múltiples criterios (categoría, precio, texto, rangos)
+✅ Reutilizar casos de uso existentes eficientemente
+✅ Transformar y agregar datos en memoria (conteos, resúmenes)
+✅ Implementar paginación básica con metadatos
+✅ Ordenar colecciones por diferentes criterios dinámicamente
+✅ Extraer valores únicos de colecciones
+✅ Validar datos con expresiones regulares (regex)
+✅ Combinar múltiples filtros opcionales
+✅ Manejar errores con graceful degradation (valores por defecto)
+✅ Aplicar transformaciones complejas de datos (formateo, cálculos)
+✅ Trabajar con query parameters opcionales
+✅ Manipular strings (truncar, formatear, convertir caso)
+
+### 🔥 NIVEL AVANZADO (Ejercicios 31-38)
+✅ Crear endpoints de estadísticas con agregación compleja
+✅ Combinar múltiples casos de uso en uno solo
+✅ Implementar health checks con verificación de dependencias
+✅ Construir dashboards con múltiples métricas
+✅ Combinar casos de uso de diferentes dominios
+✅ Crear recomendaciones y comparaciones
+✅ Implementar búsqueda global multi-recurso
+✅ Gestionar respuestas complejas con múltiples niveles
+✅ Diseñar endpoints para monitoreo y observabilidad
+
+### 🎯 ARQUITECTURA Y MEJORES PRÁCTICAS
+✅ **Flujo correcto**: Ruta → Handler → Caso de Uso → Repositorio → Dominio
+✅ **Separación de responsabilidades**: Cada capa con su función específica
+✅ **Reutilización de código**: Compartir casos de uso entre handlers
+✅ **Validación en capas**: Formato en handler, negocio en caso de uso
+✅ **Manejo de errores**: Mensajes claros y específicos
+✅ **DRY**: No repetir código, extraer funcionalidad común
+✅ **Testing**: Verificar cada capa independientemente
+
+## 📊 PROGRESIÓN DE APRENDIZAJE
+
+### Mapa Completo del Taller
+
+```
+NIVEL BÁSICO (1-8) - ⭐
+├─ Ejercicio 1: Cambiar mensaje del ping
+├─ Ejercicio 2: Cambiar versión del status
+├─ Ejercicio 3: Validar IDs negativos
+├─ Ejercicio 4: Limitar rango de IDs
+├─ Ejercicio 5: Rechazar IDs no numéricos
+├─ Ejercicio 6: Agregar campo environment
+├─ Ejercicio 7: Agregar timestamp
+└─ Ejercicio 8: Mejorar mensajes de error 404
+
+NIVEL INTERMEDIO INICIAL (9-14) - ⭐⭐
+├─ Ejercicio 9: Listar todos los usuarios ← PRIMER ENDPOINT COMPLETO
+├─ Ejercicio 10: Endpoint de bienvenida
+├─ Ejercicio 11: Contador de peticiones
+├─ Ejercicio 12: Combinar usuario + status
+├─ Ejercicio 13: Utilidad de validación
+└─ Ejercicio 14: Módulo completo de productos ← MÓDULO DESDE CERO
+
+NIVEL INTERMEDIO - FILTROS Y BÚSQUEDAS (15-22) - ⭐⭐
+├─ Ejercicio 15: Buscar usuarios por email ← MEJORADO (con contexto de negocio + arquitectura + validaciones + malas prácticas)
+├─ Ejercicio 16: Endpoint /users/{id}/email (reutilización)
+├─ Ejercicio 17: Filtrar productos por categoría
+├─ Ejercicio 18: Productos con precio mayor a X
+├─ Ejercicio 19: Filtrar usuarios por dominio de email ← SIMPLIFICADO
+├─ Ejercicio 20: Listar solo títulos de productos
+├─ Ejercicio 21: Contar productos por categoría
+└─ Ejercicio 22: Buscar productos por título
+
+NIVEL INTERMEDIO - ORDENAMIENTO Y AGREGACIÓN (23-30) - ⭐⭐ a ⭐⭐⭐
+├─ Ejercicio 23: Ordenar productos por precio ← SIMPLIFICADO (solo ascendente)
+├─ Ejercicio 24: Ordenar productos por precio descendente
+├─ Ejercicio 25: Combinar filtros (categoría + precio mínimo) ← SIMPLIFICADO
+├─ Ejercicio 26: Producto más barato ← SIMPLIFICADO
+├─ Ejercicio 27: Filtrar por rango de precio ← SIMPLIFICADO
+├─ Ejercicio 28: Obtener ciudad de usuario (datos anidados) ← SIMPLIFICADO
+├─ Ejercicio 29: Filtrar por rango de precio ampliado
+└─ Ejercicio 30: Listar categorías únicas
+
+NIVEL AVANZADO (31-38) - ⭐⭐⭐
+├─ Ejercicio 31: Estadísticas de la API ← COMBINA MÚLTIPLES CASOS DE USO
+├─ Ejercicio 32: Perfil completo de usuario
+├─ Ejercicio 33: Health check detallado
+├─ Ejercicio 34: Resumen ejecutivo completo
+├─ Ejercicio 35: Recomendaciones de productos
+├─ Ejercicio 36: Comparación de productos
+├─ Ejercicio 37: Dashboard principal
+└─ Ejercicio 38: Búsqueda global multi-recurso
+
+TOTAL: 38 ejercicios progresivos
+```
+
+### Resumen por Niveles
+
+| Nivel | Ejercicios | Habilidades | Complejidad |
+|-------|-----------|-------------|-------------|
+| **Básico** | 1-8 | Modificar código existente, validaciones simples | ⭐ |
+| **Intermedio** | 9-30 | Crear endpoints, filtros, transformaciones | ⭐⭐ |
+| **Avanzado** | 31-38 | Múltiples dominios, agregaciones complejas | ⭐⭐⭐ |
 
 ## 🚀 SIGUIENTES DESAFÍOS
 
-Ahora que dominas lo básico:
+### Nivel Implementación Real
+1. **Agrega paginación** a los endpoints de listas (limit, offset, total)
+2. **Combina filtros múltiples** (`/products?category=electronics&minPrice=100&maxPrice=500`)
+3. **Agrega ordenamiento dinámico** (`/products?sortBy=price&order=desc`)
+4. **Implementa caché** (Redis o in-memory) para reducir llamadas externas
+5. **Agrega rate limiting** para proteger endpoints de abuso
 
-1. **Agrega paginación** a los endpoints de listas
-2. **Agrega filtros** (ejemplo: `/products?category=electronics`)
-3. **Agrega autenticación** para proteger los endpoints
-4. **Conecta una base de datos** real en lugar de APIs externas
-5. **Agrega documentación automática** con Swagger
+### Nivel Profesional
+6. **Autenticación JWT** para proteger endpoints privados
+7. **Base de datos real** (PostgreSQL/MySQL) en lugar de APIs externas
+8. **Endpoints de escritura** (POST/PUT/DELETE) con validación completa
+9. **Validación con schemas** (go-validator, JSON Schema)
+10. **Documentación automática** con Swagger/OpenAPI
+11. **Versionado de API** (v1, v2) con compatibilidad hacia atrás
+12. **CORS y headers de seguridad** configurados correctamente
 
-¡Sigue practicando! 🎉
+### Nivel Experto
+13. **Testing completo**: unitarios, integración y E2E
+14. **Observabilidad**: logs estructurados, métricas (Prometheus), tracing (Jaeger)
+15. **Circuit breakers** y timeouts para APIs externas
+16. **Retry policies** con backoff exponencial
+17. **Graceful shutdown** y manejo de señales
+18. **Soporte multiidioma** (i18n) en mensajes de error
+19. **Webhooks** para notificaciones asíncronas
+20. **GraphQL** como alternativa a REST
+21. **Containerización** con Docker y docker-compose
+22. **CI/CD** con GitHub Actions o GitLab CI
+23. **Despliegue en Cloud** (AWS, GCP, Azure)
+
+## 💡 CONCEPTOS CLAVE DOMINADOS
+
+### 🔄 El Flujo Cronológico (LO MÁS IMPORTANTE)
+
+```
+SIEMPRE SEGUIR ESTE ORDEN:
+
+1️⃣ RUTA (router.go)
+   "Defino QUÉ endpoint quiero exponer"
+   
+2️⃣ HANDLER (handler/)
+   "Recibo la petición HTTP"
+   "Extraigo parámetros de URL/query"
+   "Valido formato (¿es un número? ¿está vacío?)"
+   
+3️⃣ CASO DE USO (usecase/)
+   "Aplico lógica de negocio"
+   "Valido reglas (¿ID entre 1-10? ¿email válido?)"
+   "Llamo al repositorio"
+   
+4️⃣ REPOSITORIO (adapter/repository/)
+   "Obtengo datos de API externa o BD"
+   "Manejo errores de conexión"
+   
+5️⃣ DOMINIO (domain/)
+   "Define estructuras y contratos"
+   "Ya suele estar creado"
+```
+
+### 🎯 Arquitectura y Patrones
+
+1. **Arquitectura en capas**: Separación clara entre presentación, lógica y datos
+2. **Dependency Injection**: Pasar dependencias en constructores
+3. **Interfaces**: Contratos entre capas para flexibilidad
+4. **Error handling**: Propagación y transformación de errores
+5. **HTTP Status Codes**: Uso correcto según el contexto
+6. **REST Best Practices**: Nombres de recursos, verbos HTTP, estructuras de respuesta
+7. **Code organization**: Estructura de carpetas escalable
+8. **Reusabilidad**: Evitar duplicación, extraer funcionalidad común
+9. **Testability**: Código fácil de testear por su diseño
+10. **Mantenibilidad**: Código claro, consistente y bien documentado
+
+### 📝 Recordatorios Importantes
+
+✅ **SIEMPRE** empieza por la ruta  
+✅ **NUNCA** empieces por el repositorio o dominio  
+✅ **PRIMERO** piensa en QUÉ necesitas, luego en CÓMO lo obtienes  
+✅ **REUTILIZA** casos de uso existentes cuando sea posible  
+✅ **VALIDA** en dos capas: formato en handler, negocio en caso de uso  
+✅ **PRUEBA** después de cada paso importante  
+✅ **LEE** el ejercicio completo antes de empezar
+
+## 🎖️ HABILIDADES ADQUIRIDAS
+
+Ahora puedes:
+- ✅ Diseñar y crear APIs REST completas desde cero
+- ✅ Implementar arquitectura hexagonal / clean architecture
+- ✅ Manejar múltiples fuentes de datos
+- ✅ Crear endpoints para diferentes casos de uso
+- ✅ Validar datos en múltiples capas
+- ✅ Implementar patrones de diseño comunes
+- ✅ Estructurar proyectos de forma escalable
+- ✅ Debuggear y resolver problemas eficientemente
+- ✅ Leer y entender código de otros desarrolladores
+- ✅ Contribuir a proyectos Go de forma profesional
+
+## 🌟 PRÓXIMOS PASOS RECOMENDADOS
+
+1. **Practica regularmente**: Crea tu propio proyecto desde cero
+2. **Lee código**: Explora proyectos open source en Go
+3. **Contribuye**: Participa en proyectos de código abierto
+4. **Aprende patrones**: Design patterns, architectural patterns
+5. **Profundiza en Go**: Goroutines, channels, context, testing avanzado
+6. **Explora frameworks**: Echo, Gin, Fiber (aunque ya dominas lo fundamental)
+7. **Aprende sobre infraestructura**: Docker, Kubernetes, cloud services
+
+¡Felicidades por completar el taller! Ahora tienes una base sólida para desarrollar APIs profesionales en Go. 🎉
+
+---
+
+## ✅ CHECKLIST RÁPIDA PARA CADA EJERCICIO
+
+Usa esta lista cada vez que hagas un ejercicio:
+
+### Antes de Empezar
+- [ ] Leí el ejercicio completo
+- [ ] Entiendo QUÉ necesito crear
+- [ ] Sé en qué nivel estoy (básico/intermedio/avanzado)
+- [ ] El servidor está corriendo en otra terminal
+
+### Durante el Desarrollo (sigue este orden)
+- [ ] **PASO 1**: Comenté la ruta en `router.go`
+- [ ] **PASO 2**: Creé/modifiqué el Handler
+- [ ] **PASO 3**: Creé el Caso de Uso (si es necesario)
+- [ ] **PASO 4**: Definí el Dominio (si es necesario)
+- [ ] **PASO 5**: Implementé el Repositorio (si es necesario)
+- [ ] **PASO 6**: Conecté todo en el Router
+- [ ] Revisé que no haya errores de compilación
+- [ ] Los imports están correctos
+
+### Después de Implementar
+- [ ] Reinicié el servidor
+- [ ] Probé el endpoint con curl
+- [ ] Verifiqué el resultado esperado
+- [ ] Probé casos de error (IDs inválidos, parámetros faltantes)
+- [ ] El servidor sigue funcionando sin errores
+
+### Si Algo No Funciona
+- [ ] Leí el mensaje de error completo
+- [ ] Revisé los nombres (mayúsculas/minúsculas)
+- [ ] Verifiqué los imports
+- [ ] Comparé con ejemplos de ejercicios anteriores
+- [ ] Revisé que seguí el orden: Ruta → Handler → Caso de Uso → Repositorio
+
+---
+
+**¡Sigue construyendo y aprendiendo!** 🚀
+
