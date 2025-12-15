@@ -68,8 +68,10 @@ internal/domain/
 │   └── repository.go    # Interface que define CÓMO obtener usuarios
 ├── status/
 │   └── status.go        # Entidad Status
-└── ping/
-    └── ping.go          # Entidad Ping
+├── ping/
+│   └── ping.go          # Entidad Ping
+└── welcome/
+    └── welcome.go       # Entidad Welcome (bienvenida con lista de endpoints)
 ```
 
 **Código real**:
@@ -99,11 +101,14 @@ internal/domain/
 ```
 internal/usecase/
 ├── user/
-│   └── get_user.go      # Caso de uso: obtener un usuario por ID
+│   ├── get_user.go      # Caso de uso: obtener un usuario por ID
+│   └── get_user_all.go  # Caso de uso: listar todos los usuarios
 ├── status/
 │   └── get_status.go    # Caso de uso: obtener estado del servidor
-└── ping/
-    └── ping.go          # Caso de uso: verificar que la API responde
+├── ping/
+│   └── ping.go          # Caso de uso: verificar que la API responde
+└── welcome/
+    └── get_welcome.go   # Caso de uso: mostrar mensaje de bienvenida
 ```
 
 **Código real**:
@@ -138,7 +143,8 @@ internal/adapter/
     └── handler/
         ├── user_handler.go        # Recibe HTTP request, llama usecase, devuelve HTTP response
         ├── status_handler.go
-        └── ping_handler.go
+        ├── ping_handler.go
+        └── welcome_handler.go     # Maneja el endpoint de bienvenida
 ```
 
 **Código real**:
@@ -494,4 +500,5 @@ Esta arquitectura puede parecer "mucha carpeta" para un proyecto simple, pero:
 ✅ **Es educativa**: Aprendes patrones que aplican a cualquier lenguaje
 
 **La clave**: Respetar el flujo de dependencias (siempre hacia el dominio) y no mezclar responsabilidades.
+
 

@@ -12,7 +12,8 @@ type UserAPIRepository struct {
 	client  *http.Client
 }
 
-func NewUserAPIRepository(baseURL string) *UserAPIRepository {
+// NewUserRepository crea una nueva instancia del repositorio de usuarios
+func NewUserRepository(baseURL string) UserRepository {
 	return &UserAPIRepository{
 		baseURL: baseURL,
 		client:  &http.Client{},
@@ -27,12 +28,13 @@ func (r *UserAPIRepository) FindByID(id int) (*user.User, error) {
 		return nil, fmt.Errorf("error al consultar API: %w", err)
 	}
 	defer resp.Body.Close()
+
 	if resp.StatusCode == http.StatusInternalServerError {
 		return nil, fmt.Errorf("el servidor externo no está disponible")
 	}
 
 	if resp.StatusCode == http.StatusNotFound {
-		return nil, fmt.Errorf("Usuario no encontrado")
+		return nil, fmt.Errorf("usuario no encontrado")
 	}
 
 	if resp.StatusCode != http.StatusOK {
@@ -47,16 +49,28 @@ func (r *UserAPIRepository) FindByID(id int) (*user.User, error) {
 	return &u, nil
 }
 
-func (r *UserAPIRepository) FindAll() (*user.Users, error) {
+func (r *UserAPIRepository) FindAll() ([]*user.User, error) {
 	url := fmt.Sprintf("%s/users", r.baseURL)
+	
 	resp, err := r.client.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("error al consultar API: %w", err)
 	}
+	defer resp.Body.Close()
 
-	var us user.Users
-	if err := json.NewDecoder(resp.Body).Decode(&us); err != nil {
+	if resp.StatusCode == http.StatusInternalServerError {
+		return nil, fmt.Errorf("el servidor externo no está disponible")
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("API respondió con código: %d", resp.StatusCode)
+	}
+
+	var users []*user.User
+	if err := json.NewDecoder(resp.Body).Decode(&users); err != nil {
 		return nil, fmt.Errorf("error al decodificar respuesta: %w", err)
 	}
-	return &us, nil
+
+	return users, nil
 }
+

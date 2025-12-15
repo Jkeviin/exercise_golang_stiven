@@ -33,32 +33,101 @@ Si todo funciona, ¡estás listo para empezar! 🎉
 
 Antes de empezar con los ejercicios, es importante entender el **orden cronológico** en el que creamos un endpoint:
 
-### 🔄 FLUJO CORRECTO: Ruta → Handler → Caso de Uso → Repositorio
+## 📂 ESTRUCTURA DE CARPETAS DEL PROYECTO
 
 ```
-1. RUTA (router.go)
-   ↓ "Quiero un endpoint /users"
+ejercicio-api/
+├── cmd/app/main.go              # Punto de entrada
+├── internal/
+│   ├── config/                  # Configuración
+│   ├── utils/                   # Utilidades compartidas
+│   ├── domain/                  # Entidades (modelos puros)
+│   │   ├── user/
+│   │   └── product/
+│   ├── repository/              # Capa de datos
+│   │   ├── interfaces.go        # Interfaces de repositorios
+│   │   ├── user_repository.go
+│   │   └── product_repository.go
+│   ├── usecase/                 # Lógica de negocio
+│   │   ├── user/
+│   │   ├── product/
+│   │   └── status/
+│   ├── handler/                 # Adaptadores HTTP
+│   │   ├── user_handler.go
+│   │   └── product_handler.go
+│   └── router/                  # Configuración de rutas
+│       └── router.go
+└── docs/                        # Documentación
+```
+
+### 🔄 FLUJO CORRECTO DE DESARROLLO: Ruta → Handler → Caso de Uso → Repositorio → Main
+
+```
+1. RUTA (internal/router/router.go)
+   ↓ "Quiero exponer GET /users"
    
-2. HANDLER (handler/)
-   ↓ "Recibe la petición HTTP, extrae parámetros"
+2. HANDLER (internal/handler/)
+   ↓ "Recibe la petición HTTP, extrae parámetros, valida formato"
    
-3. CASO DE USO (usecase/)
+3. CASO DE USO (internal/usecase/)
    ↓ "Aplica lógica de negocio y validaciones"
    
-4. REPOSITORIO (adapter/repository/)
-   ↓ "Obtiene los datos de APIs externas o BD"
+4. REPOSITORIO (internal/repository/)
+   ↓ "Obtiene los datos de API externa o BD"
    
-5. DOMINIO (domain/)
-   "Define las estructuras de datos y contratos"
+5. DOMINIO (internal/domain/)
+   ↓ "Define estructuras de datos" (usualmente ya existe)
+   
+6. MAIN (cmd/app/main.go)
+   ↓ "Conecta todo: crea instancias e inyecta dependencias"
 ```
 
 ### ✅ ¿Por qué este orden?
 
-1. **Empezamos por la Ruta** porque primero definimos QUÉ queremos exponer
-2. **Creamos el Handler** que recibirá las peticiones HTTP
-3. **Creamos el Caso de Uso** con la lógica de negocio
-4. **Definimos el Repositorio** si necesitamos obtener datos
-5. **El Dominio** define las estructuras y contratos que todos usan
+**Orden PRÁCTICO de desarrollo (cómo piensas el problema):**
+
+1. **Ruta primero** - Defines QUÉ endpoint quieres exponer
+2. **Handler** - Piensas CÓMO manejar esa petición HTTP
+3. **Caso de Uso** - Defines QUÉ lógica de negocio necesitas
+4. **Repositorio** - Implementas DE DÓNDE obtienes los datos
+5. **Dominio** - Defines estructuras (si no existen ya)
+6. **Main** - Conectas todo con inyección de dependencias
+
+**Orden de EJECUCIÓN (en runtime):**
+
+```
+Usuario → Router → Handler → Caso de Uso → Repositorio → API Externa/BD
+```
+
+### 🧠 Dos formas de pensar el orden
+
+**Para APRENDER y DESARROLLAR** → Piensa de afuera hacia adentro:
+- "Quiero un endpoint /users" → Ruta → Handler → UC → Repo
+
+**Para ARQUITECTURA** → Las dependencias apuntan hacia adentro:
+- Handler depende de UseCase, UseCase depende de Repositorio (interfaz)
+
+### 🎯 MEJORES PRÁCTICAS DE NOMBRES
+
+**❌ MAL** (confuso, nombres duplicados):
+```go
+import welcomeUseCase "ejercicio-api/internal/usecase/welcome"
+
+welcomeUsecase := welcomeUseCase.NewWelcomeUsecase()  // ❌ Confuso
+```
+
+**✅ BIEN** (claro, nombres distintos):
+```go
+import welcomeUC "ejercicio-api/internal/usecase/welcome"
+
+welcomeUsecase := welcomeUC.NewWelcomeUsecase()  // ✅ Claro
+```
+
+**Convención recomendada para imports:**
+- `userUC` para casos de uso de user
+- `userRepo` para repositorios de user  
+- `userHandler` para handlers de user
+- `productUC`, `productRepo`, `productHandler` para productos
 
 ### 📝 Tipos de Ejercicios
 
@@ -84,36 +153,189 @@ Antes de empezar con los ejercicios, es importante entender el **orden cronológ
 4. **Prueba frecuentemente** - reinicia el servidor después de cada cambio
 5. **Si algo falla**, revisa los pasos anteriores antes de continuar
 
-### 🎯 Ejemplo Visual del Flujo
+### 🎯 Ejemplo Visual del Flujo Completo (Orden práctico)
 
 ```go
-// 1. RUTA (comentada primero)
-// r.Get("/users", userHandler.List)
+// ========================================
+// 1. RUTA (internal/infrastructure/http/router.go)
+// ========================================
+// Primero defines QUÉ quieres exponer
+func SetupRouter(userHandler *handler.UserHandler) *chi.Mux {
+    r := chi.NewRouter()
+    
+    // "Quiero un endpoint GET /users que liste usuarios"
+    r.Get("/users", userHandler.List)  // ← Empiezas aquí
+    
+    return r
+}
 
-// 2. HANDLER
+// ========================================
+// 2. HANDLER (internal/adapter/http/handler/)
+// ========================================
+// user_handler.go - ¿Cómo manejo esa petición HTTP?
+type UserHandler struct {
+    listUsersUC *userUC.ListUsersUsecase  // Necesito un caso de uso
+}
+
 func (h *UserHandler) List(w http.ResponseWriter, r *http.Request) {
-    users, err := h.listUsersUsecase.Execute()  // Llama al caso de uso
-    // ... manejo de respuesta
+    // 1. Llamo al caso de uso
+    users, err := h.listUsersUC.Execute()
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+    
+    // 2. Devuelvo JSON
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(users)
 }
 
-// 3. CASO DE USO
-func (uc *ListUsersUsecase) Execute() ([]*User, error) {
-    return uc.repository.FindAll()  // Llama al repositorio
+// ========================================
+// 3. CASO DE USO (internal/usecase/user/)
+// ========================================
+// list_users.go - ¿Qué lógica de negocio aplico?
+type ListUsersUsecase struct {
+    repository user.Repository  // Necesito un repositorio
 }
 
-// 4. REPOSITORIO
-func (r *UserAPIRepository) FindAll() ([]*User, error) {
-    // Hace petición HTTP a API externa
-    // Devuelve los datos
+func (uc *ListUsersUsecase) Execute() ([]*user.User, error) {
+    // Aplico validaciones si necesito
+    // Llamo al repositorio para obtener datos
+    return uc.repository.FindAll()
 }
 
-// 5. DOMINIO (ya definido)
+// ========================================
+// 4. REPOSITORIO (internal/adapter/repository/)
+// ========================================
+// user_api_repository.go - ¿De dónde obtengo los datos?
+type UserAPIRepository struct {
+    baseURL string
+}
+
+func (r *UserAPIRepository) FindAll() ([]*user.User, error) {
+    // Hago petición HTTP a API externa
+    resp, err := http.Get(r.baseURL + "/users")
+    // ... manejo respuesta ...
+    return users, nil
+}
+
+// ========================================
+// 5. DOMINIO (internal/domain/user/)
+// ========================================
+// user.go - ¿Qué estructuras de datos necesito?
 type User struct {
     ID    int    `json:"id"`
     Name  string `json:"name"`
     Email string `json:"email"`
 }
+
+// repository.go - Define el CONTRATO (interfaz)
+type Repository interface {
+    FindAll() ([]*User, error)  // El contrato que debe cumplir el repositorio
+}
+
+// ========================================
+// 6. MAIN (cmd/app/main.go)
+// ========================================
+// Conecta TODO con inyección de dependencias
+func main() {
+    // Crear instancias (de adentro hacia afuera)
+    userRepo := repository.NewUserAPIRepository("https://api.com")
+    listUsersUC := userUC.NewListUsersUsecase(userRepo)
+    userHandler := handler.NewUserHandler(listUsersUC)
+    router := httpInfra.SetupRouter(userHandler)
+    
+    // Iniciar servidor
+    http.ListenAndServe(":8080", router)
+}
 ```
+
+### 📊 Cómo fluye en RUNTIME (de afuera hacia adentro)
+
+```
+Usuario hace GET /users
+   ↓
+Router detecta la ruta
+   ↓
+Handler recibe petición HTTP
+   ↓
+Caso de Uso aplica lógica
+   ↓
+Repositorio obtiene datos (API/BD)
+   ↓
+Datos suben de vuelta al usuario
+```
+
+### 🧠 Dos perspectivas del mismo sistema
+
+**DESARROLLO (cómo lo construyes):**
+Ruta → Handler → UseCase → Repository → Dominio → Main
+
+**DEPENDENCIAS (arquitectura):**
+Handler depende de → UseCase depende de → Repository (interfaz del Dominio)
+
+### 📝 MEJORES PRÁCTICAS DE NOMBRES (MUY IMPORTANTE)
+
+**❌ PROBLEMA COMÚN**: Nombres confusos entre imports y variables
+
+```go
+// ❌ MAL - Difícil de leer
+import welcomeUseCase "ejercicio-api/internal/usecase/welcome"
+
+func main() {
+    welcomeUsecase := welcomeUseCase.NewWelcomeUsecase()  // ❌ Confuso
+    //             ↑ variable          ↑ import
+}
+```
+
+**✅ SOLUCIÓN**: Usar alias claros y distintos
+
+```go
+// ✅ BIEN - Claro y legible
+import welcomeUC "ejercicio-api/internal/usecase/welcome"
+
+func main() {
+    welcomeUsecase := welcomeUC.NewWelcomeUsecase()  // ✅ Claro
+    //             ↑ variable    ↑ alias corto
+}
+```
+
+### 🎯 Convención de Nombres Recomendada
+
+**Para IMPORTS (alias cortos y claros):**
+```go
+import (
+    userUC "ejercicio-api/internal/usecase/user"
+    productUC "ejercicio-api/internal/usecase/product"
+    statusUC "ejercicio-api/internal/usecase/status"
+    
+    userRepo "ejercicio-api/internal/adapter/repository"  // Si hay conflicto
+)
+```
+
+**Para VARIABLES (nombres descriptivos):**
+```go
+// Casos de uso
+getUserUsecase := userUC.NewGetUserUsecase(userRepo)
+listUsersUsecase := userUC.NewListUsersUsecase(userRepo)
+
+// Handlers
+userHandler := handler.NewUserHandler(getUserUsecase, listUsersUsecase)
+productHandler := handler.NewProductHandler(getProductUsecase)
+
+// Repositorios
+userRepo := repository.NewUserAPIRepository(cfg.ExternalAPIURL)
+productRepo := repository.NewProductAPIRepository(cfg.ProductAPIURL)
+```
+
+### 📋 Tabla de Convenciones
+
+| Tipo | Alias Import | Nombre Variable | Ejemplo Completo |
+|------|-------------|-----------------|------------------|
+| **UseCase** | `userUC` | `getUserUsecase` | `getUserUsecase := userUC.NewGetUserUsecase()` |
+| **Handler** | `handler` | `userHandler` | `userHandler := handler.NewUserHandler()` |
+| **Repository** | `repository` | `userRepo` | `userRepo := repository.NewUserAPIRepository()` |
+| **Domain** | `user` | `userData` | `userData := user.User{...}` |
 
 ### ⚠️ IMPORTANTE: Cuándo usar Handler vs UseCase
 
@@ -476,69 +698,220 @@ Mejoraste los mensajes de error para que sean más claros para los usuarios.
 
 Actualmente solo podemos ver un usuario a la vez con `/users/1`, `/users/2`, etc. El cliente necesita un nuevo endpoint `/users` (sin ID) que devuelva la lista completa de usuarios disponibles.
 
-### 🎯 INSTRUCCIONES
+### 🎯 INSTRUCCIONES (Orden práctico: Ruta → Handler → Caso de Uso → Repositorio → Main)
 
-**PASO 1: Registrar la ruta (Empezamos desde aquí)**
+**PASO 1: Pensar en la ruta (comenta temporalmente)**
 
-1. Ve a: `internal/infrastructure/http/router.go`
-2. Busca donde está la ruta `/users/{id}`
-3. Arriba de esa línea, **comenta temporalmente** la nueva ruta que crearás:
+1. Ve a: `internal/router/router.go`
+2. Busca donde están las rutas de usuarios
+3. **Comenta temporalmente** la ruta que crearás:
    ```go
-   // r.Get("/users", userHandler.List)
+   // r.Get("/users", userHandler.GetAll)  // ← Esto es lo que quiero crear
    ```
-4. Esto te ayudará a recordar qué estás construyendo
+4. Esto te ayuda a recordar QUÉ estás construyendo
 
-**PASO 2: Crear el método en el Handler**
+**PASO 2: Actualizar el Handler (para manejar la petición)**
 
-5. Ve a: `internal/adapter/http/handler/user_handler.go`
-6. Agrega un nuevo campo en la estructura del handler para el caso de uso:
+5. Ve a: `internal/handler/user_handler.go`
+6. Agrega el nuevo caso de uso a la estructura:
    ```go
-   listUsersUsecase *user.ListUsersUsecase
+   type UserHandler struct {
+       getUserUC    *userUC.GetUserUsecase
+       listUsersUC  *userUC.ListUsersUsecase  // ✅ Nuevo campo
+   }
    ```
-7. Actualiza el constructor para recibir este caso de uso
-8. Crea el método `List`:
-   - Llama al caso de uso
-   - Si hay error, devuelve 500
-   - Si todo bien, devuelve la lista en JSON
 
-**PASO 3: Crear el Caso de Uso**
+7. Actualiza el constructor:
+   ```go
+   func NewUserHandler(
+       getUserUC *userUC.GetUserUsecase,
+       listUsersUC *userUC.ListUsersUsecase,  // ✅ Nuevo parámetro
+   ) *UserHandler {
+       return &UserHandler{
+           getUserUC:   getUserUC,
+           listUsersUC: listUsersUC,
+       }
+   }
+   ```
+
+8. Crea el método `GetAll`:
+   ```go
+   func (h *UserHandler) GetAll(w http.ResponseWriter, r *http.Request) {
+       users, err := h.listUsersUC.Execute()
+       if err != nil {
+           http.Error(w, `{"error":"error al obtener usuarios"}`, http.StatusInternalServerError)
+           return
+       }
+       
+       w.Header().Set("Content-Type", "application/json")
+       json.NewEncoder(w).Encode(users)
+   }
+   ```
+
+**PASO 3: Crear el Caso de Uso (lógica de negocio)**
 
 9. Ve a: `internal/usecase/user/`
 10. Crea archivo nuevo: `list_users.go`
-11. Crea la estructura `ListUsersUsecase` que necesita el repositorio
-12. Crea el método `Execute()` que:
-    - Llama al repositorio para obtener todos los usuarios
-    - Devuelve la lista o el error
+11. Implementa el caso de uso:
+   ```go
+   package user
+   
+   import "ejercicio-api/internal/domain/user"
+   
+   type ListUsersUsecase struct {
+       repository user.Repository
+   }
+   
+   func NewListUsersUsecase(repo user.Repository) *ListUsersUsecase {
+       return &ListUsersUsecase{repository: repo}
+   }
+   
+   func (uc *ListUsersUsecase) Execute() ([]*user.User, error) {
+       return uc.repository.FindAll()
+   }
+   ```
 
-**PASO 4: Actualizar el contrato del Repositorio**
+**PASO 4: Actualizar el Repositorio (de dónde obtengo datos)**
 
-13. Ve a: `internal/domain/user/repository.go`
-14. Agrega el método: `FindAll() ([]*User, error)`
+12. Ve a: `internal/domain/user/repository.go`
+13. Agrega el método a la interfaz:
 
-**PASO 5: Implementar en el Repositorio**
+1. Ve a: `internal/domain/user/repository.go`
+2. Agrega el método a la interfaz:
+   ```go
+   type Repository interface {
+       FindByID(id int) (*User, error)
+       FindAll() ([]*User, error)  // ✅ Nuevo método
+   }
+   ```
 
-15. Ve a: `internal/adapter/repository/user_api_repository.go`
-16. Implementa el método `FindAll`:
-    - Construye la URL: `{baseURL}/users` (sin ID)
-    - Haz la petición HTTP GET
-    - Decodifica la respuesta en un slice de usuarios
-    - Maneja los errores apropiadamente
+**PASO 2: Implementar en el Repositorio**
 
-**PASO 6: Conectar todo en el Router**
+3. Ve a: `internal/adapter/repository/user_api_repository.go`
+4. Implementa el método `FindAll`:
+   ```go
+   func (r *UserAPIRepository) FindAll() ([]*user.User, error) {
+       // Construir URL sin ID
+       url := fmt.Sprintf("%s/users", r.baseURL)
+       
+       // Hacer petición HTTP GET
+       resp, err := http.Get(url)
+       if err != nil {
+           return nil, fmt.Errorf("error al conectar con la API: %w", err)
+       }
+       defer resp.Body.Close()
+       
+       // Validar código de estado
+       if resp.StatusCode != http.StatusOK {
+           return nil, fmt.Errorf("la API devolvió código %d", resp.StatusCode)
+       }
+       
+       // Decodificar respuesta
+       var users []*user.User
+       if err := json.NewDecoder(resp.Body).Decode(&users); err != nil {
+           return nil, fmt.Errorf("error al decodificar respuesta: %w", err)
+       }
+       
+       return users, nil
+   }
+   ```
 
-17. Vuelve a: `internal/infrastructure/http/router.go`
-18. Crea la instancia del caso de uso:
+**PASO 3: Crear el Caso de Uso**
+
+5. Ve a: `internal/usecase/user/`
+6. Crea archivo nuevo: `list_users.go`
+7. Implementa el caso de uso:
+   ```go
+   package user
+   
+   import "ejercicio-api/internal/domain/user"
+   
+   type ListUsersUsecase struct {
+       repository user.Repository
+   }
+   
+   func NewListUsersUsecase(repo user.Repository) *ListUsersUsecase {
+       return &ListUsersUsecase{repository: repo}
+   }
+   
+   func (uc *ListUsersUsecase) Execute() ([]*user.User, error) {
+       return uc.repository.FindAll()
+   }
+   ```
+
+14. Implementa el método `FindAll`:
     ```go
-    listUsersUsecase := user.NewListUsersUsecase(userRepo)
+    func (r *UserAPIRepository) FindAll() ([]*user.User, error) {
+        // Construir URL sin ID
+        url := fmt.Sprintf("%s/users", r.baseURL)
+        
+        // Hacer petición HTTP GET
+        resp, err := http.Get(url)
+        if err != nil {
+            return nil, fmt.Errorf("error al conectar con la API: %w", err)
+        }
+        defer resp.Body.Close()
+        
+        // Validar código de estado
+        if resp.StatusCode != http.StatusOK {
+            return nil, fmt.Errorf("la API devolvió código %d", resp.StatusCode)
+        }
+        
+        // Decodificar respuesta
+        var users []*user.User
+        if err := json.NewDecoder(resp.Body).Decode(&users); err != nil {
+            return nil, fmt.Errorf("error al decodificar respuesta: %w", err)
+        }
+        
+        return users, nil
+    }
     ```
-19. Pásalo al handler al crearlo
-20. Descomenta y activa la ruta: `r.Get("/users", userHandler.List)`
+
+**PASO 5: Conectar en main.go (Inyección de Dependencias)**
+
+15. Ve a: `cmd/app/main.go`
+16. En la sección de **casos de uso**, crea la instancia:
+    ```go
+    // 3️⃣ CREAR CASOS DE USO (Capa de Aplicación)
+    getUserUC := userUC.NewGetUserUsecase(userRepo)
+    listUsersUC := userUC.NewListUsersUsecase(userRepo)  // ✅ Nuevo caso de uso
+    getStatusUC := statusUC.NewGetStatusUsecase()
+    // ...
+    ```
+
+17. Actualiza la creación del handler para pasar ambos casos de uso:
+    ```go
+    // 4️⃣ CREAR HANDLERS HTTP (Capa de Adaptadores)
+    userHandler := handler.NewUserHandler(getUserUC, listUsersUC)  // ✅ Pasar ambos
+    ```
+
+**PASO 6: Activar la ruta en el Router**
+
+18. Vuelve a: `internal/infrastructure/http/router.go`
+19. Descomenta y activa la ruta (ANTES de `/users/{id}` para evitar conflictos):
+    ```go
+    // Rutas de negocio
+    r.Get("/users", userHandler.GetAll)         // ✅ Activar esta ruta (antes)
+    r.Get("/users/{id}", userHandler.GetByID)   // Ruta existente (después)
+    ```
 
 **PASO 7: Prueba**
 
-21. Reinicia el servidor
-22. Ejecuta: `curl http://localhost:8080/users`
-23. Debes ver una lista de 10 usuarios
+20. Reinicia el servidor: `go run cmd/app/main.go`
+21. Ejecuta: `curl http://localhost:8080/users`
+22. Debes ver una lista de 10 usuarios
+
+### 💡 Orden de los pasos explicado
+
+**Orden PRÁCTICO (cómo piensas el problema):**
+1. **Ruta** - "Quiero exponer GET /users"
+2. **Handler** - "Necesito un método GetAll que llame a un caso de uso"
+3. **Caso de Uso** - "Necesito ListUsersUsecase que use el repositorio"
+4. **Repositorio** - "Necesito implementar FindAll para obtener datos"
+5. **Main** - "Conecto todo: creo caso de uso, actualizo handler"
+6. **Router** - "Activo la ruta que comenté al inicio"
+
+Este orden es **natural** y **fácil de seguir** al desarrollar.
 
 ### ✅ RESULTADO ESPERADO
 
@@ -683,67 +1056,139 @@ Handler → GetUserInfoUsecase → GetUserUsecase
 
 **¿Por qué?** El Handler es responsable de la orquestación HTTP, los UseCases deben ser independientes y reutilizables.
 
-### 🎯 INSTRUCCIONES
+### 🎯 INSTRUCCIONES (Orden correcto de desarrollo)
 
-**PASO 1: Registrar la ruta**
+**PASO 1: Crear el Handler (AQUÍ VA LA ORQUESTACIÓN)**
 
-1. Ve a: `internal/infrastructure/http/router.go`
-2. Comenta temporalmente la nueva ruta:
+1. En `internal/adapter/http/handler/`
+2. Crea archivo: `user_info_handler.go`
+3. Crea `UserInfoHandler` que **recibe AMBOS casos de uso**:
    ```go
-   // r.Get("/user-info/{id}", userInfoHandler.GetByID)
-   ```
-
-**PASO 2: Crear el Handler (AQUÍ VA LA ORQUESTACIÓN)**
-
-3. En `internal/adapter/http/handler/`
-4. Crea archivo: `user_info_handler.go`
-5. Crea `UserInfoHandler` que **recibe AMBOS casos de uso**:
-   ```go
+   package handler
+   
+   import (
+       "ejercicio-api/internal/domain/status"
+       "ejercicio-api/internal/domain/user"
+       statusUC "ejercicio-api/internal/usecase/status"  // ✅ Alias claro
+       userUC "ejercicio-api/internal/usecase/user"      // ✅ Alias claro
+       "encoding/json"
+       "net/http"
+       "strconv"
+       "github.com/go-chi/chi/v5"
+   )
+   
    type UserInfoHandler struct {
-       getUserUC   *userUsecase.GetUserUsecase
-       getStatusUC *statusUsecase.GetStatusUsecase
+       getUserUC   *userUC.GetUserUsecase    // ✅ Usa el alias
+       getStatusUC *statusUC.GetStatusUsecase
+   }
+   
+   func NewUserInfoHandler(
+       getUserUC *userUC.GetUserUsecase,
+       getStatusUC *statusUC.GetStatusUsecase,
+   ) *UserInfoHandler {
+       return &UserInfoHandler{
+           getUserUC:   getUserUC,
+           getStatusUC: getStatusUC,
+       }
    }
    ```
 
-6. Crea el método `GetByID` que **orquesta**:
-   - Extrae y valida el parámetro `id` de la URL
-   - **Llama directamente** a `h.getUserUC.Execute(id)`
-   - **Llama directamente** a `h.getStatusUC.Execute()`
-   - **Combina resultados** en una estructura anónima:
-     ```go
-     response := struct {
-         User         *user.User     `json:"user"`
-         ServerStatus *status.Status `json:"server_status"`
-     }{
-         User:         userData,
-         ServerStatus: statusData,
-     }
-     ```
-   - Devuelve la respuesta en JSON
-
-**PASO 3: Conectar en main.go**
-
-7. Ve a: `cmd/app/main.go`
-8. En la sección de handlers, crea el handler pasándole **ambos casos de uso**:
+4. Crea el método `GetByID` que **orquesta**:
    ```go
-   userInfoHandler := handler.NewUserInfoHandler(getUserUsecase, getStatusUsecase)
+   func (h *UserInfoHandler) GetByID(w http.ResponseWriter, r *http.Request) {
+       // 1. Extraer y validar parámetro
+       idParam := chi.URLParam(r, "id")
+       id, err := strconv.Atoi(idParam)
+       if err != nil {
+           http.Error(w, `{"error":"ID inválido"}`, http.StatusBadRequest)
+           return
+       }
+       
+       // 2. Orquestar: llamar a ambos casos de uso
+       userData, err := h.getUserUC.Execute(id)
+       if err != nil {
+           http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusBadRequest)
+           return
+       }
+       
+       statusData := h.getStatusUC.Execute()
+       
+       // 3. Combinar resultados (estructura anónima)
+       response := struct {
+           User         *user.User     `json:"user"`
+           ServerStatus *status.Status `json:"server_status"`
+       }{
+           User:         userData,
+           ServerStatus: statusData,
+       }
+       
+       // 4. Devolver JSON
+       w.Header().Set("Content-Type", "application/json")
+       json.NewEncoder(w).Encode(response)
+   }
    ```
 
-**PASO 4: Actualizar el Router**
+**PASO 2: Conectar en main.go (Inyección de Dependencias)**
 
-9. Ve a: `internal/infrastructure/http/router.go`
-10. Agrega el parámetro `userInfoHandler` a la función `SetupRouter`
-11. Activa la ruta: `r.Get("/user-info/{id}", userInfoHandler.GetByID)`
+5. Ve a: `cmd/app/main.go`
+6. En la sección de **handlers**, crea la instancia:
+   ```go
+   // 4️⃣ CREAR HANDLERS HTTP (Capa de Adaptadores)
+   userHandler := handler.NewUserHandler(getUserUC, listUsersUC)
+   statusHandler := handler.NewStatusHandler(getStatusUC)
+   pingHandler := handler.NewPingHandler(pingUC)
+   welcomeHandler := handler.NewWelcomeHandler(welcomeUC)
+   
+   // ✅ Nuevo handler que orquesta múltiples casos de uso
+   userInfoHandler := handler.NewUserInfoHandler(getUserUC, getStatusUC)
+   ```
 
-**PASO 5: Actualizar main.go para pasar el handler**
+**PASO 3: Actualizar la firma del Router**
 
-12. En `cmd/app/main.go`, cuando llamas a `SetupRouter`, pasa el nuevo handler
-13. Reinicia el servidor
+7. Ve a: `internal/infrastructure/http/router.go`
+8. Agrega el parámetro `userInfoHandler` a la función `SetupRouter`:
+   ```go
+   func SetupRouter(
+       userHandler *handler.UserHandler,
+       statusHandler *handler.StatusHandler,
+       pingHandler *handler.PingHandler,
+       welcomeHandler *handler.WelcomeHandler,
+       userInfoHandler *handler.UserInfoHandler,  // ✅ Nuevo parámetro
+   ) *chi.Mux {
+   ```
+
+**PASO 4: Registrar la ruta en el Router**
+
+9. En el mismo archivo `router.go`, registra la ruta:
+   ```go
+   // Rutas de negocio
+   r.Get("/users/{id}", userHandler.GetByID)
+   r.Get("/users", userHandler.GetAll)
+   
+   // ✅ Rutas combinadas (orquestación)
+   r.Get("/user-info/{id}", userInfoHandler.GetByID)
+   ```
+
+**PASO 5: Pasar el handler desde main.go**
+
+10. Vuelve a `cmd/app/main.go`
+11. Actualiza la llamada a `SetupRouter` para pasar el nuevo handler:
+    ```go
+    // 5️⃣ CONFIGURAR ROUTER (Capa de Infraestructura)
+    router := httpInfra.SetupRouter(
+        userHandler,
+        statusHandler,
+        pingHandler,
+        welcomeHandler,
+        userInfoHandler,  // ✅ Pasar el nuevo handler
+    )
+    ```
 
 **PASO 6: Prueba**
 
-14. Ejecuta: `curl http://localhost:8080/user-info/1`
-15. Debe mostrar usuario + status en una respuesta
+12. Reinicia el servidor: `go run cmd/app/main.go`
+13. Ejecuta: `curl http://localhost:8080/user-info/1`
+14. Debe mostrar usuario + status en una respuesta
 
 ### ✅ RESULTADO ESPERADO
 
@@ -1985,62 +2430,145 @@ StatsHandler → Llama ListUsersUsecase → Cuenta total
 
 **NO** creamos un `GetStatsUsecase` que llame a otros UseCases. Los cálculos simples (conteos, agregaciones) se hacen en el Handler.
 
-### 🎯 INSTRUCCIONES
+### 🎯 INSTRUCCIONES (Orden correcto con main.go)
 
-**PASO 1: Registrar la ruta**
+**PASO 1: Crear el Handler (ORQUESTACIÓN Y AGREGACIÓN)**
 
-1. En `router.go`, comenta:
+1. Crea: `internal/adapter/http/handler/stats_handler.go`
+2. Define `StatsHandler` que recibe **ambos casos de uso**:
    ```go
-   // r.Get("/stats", statsHandler.Get)
-   ```
-
-**PASO 2: Crear el Handler (ORQUESTACIÓN Y AGREGACIÓN)**
-
-2. Crea: `internal/adapter/http/handler/stats_handler.go`
-3. Define `StatsHandler` que recibe **ambos casos de uso**:
-   ```go
+   package handler
+   
+   import (
+       "ejercicio-api/internal/domain/product"
+       productUC "ejercicio-api/internal/usecase/product"  // ✅ Alias claro
+       userUC "ejercicio-api/internal/usecase/user"        // ✅ Alias claro
+       "encoding/json"
+       "net/http"
+   )
+   
    type StatsHandler struct {
-       listUsersUC    *userUsecase.ListUsersUsecase
-       listProductsUC *productUsecase.ListProductsUsecase
+       listUsersUC    *userUC.ListUsersUsecase
+       listProductsUC *productUC.ListProductsUsecase
+   }
+   
+   func NewStatsHandler(
+       listUsersUC *userUC.ListUsersUsecase,
+       listProductsUC *productUC.ListProductsUsecase,
+   ) *StatsHandler {
+       return &StatsHandler{
+           listUsersUC:    listUsersUC,
+           listProductsUC: listProductsUC,
+       }
    }
    ```
 
-4. Implementa el método `Get`:
-   - Llama a `h.listUsersUC.Execute()` y cuenta: `len(users)`
-   - Llama a `h.listProductsUC.Execute()` y cuenta: `len(products)`
-   - Extrae categorías únicas usando un `map[string]bool`
-   - Construye la respuesta con estructura anónima:
-     ```go
-     response := struct {
-         TotalUsers    int      `json:"total_users"`
-         TotalProducts int      `json:"total_products"`
-         Categories    []string `json:"categories"`
-         ResponseTime  string   `json:"response_time"`
-     }{
-         TotalUsers:    len(users),
-         TotalProducts: len(products),
-         Categories:    categories,
-         ResponseTime:  "~500ms",
-     }
-     ```
-   - Devuelve JSON
-
-**PASO 3: Conectar en main.go**
-
-5. Crea el handler pasándole ambos casos de uso:
+3. Implementa el método `Get`:
    ```go
-   statsHandler := handler.NewStatsHandler(listUsersUsecase, listProductsUsecase)
+   func (h *StatsHandler) Get(w http.ResponseWriter, r *http.Request) {
+       // 1. Obtener usuarios
+       users, err := h.listUsersUC.Execute()
+       if err != nil {
+           http.Error(w, `{"error":"error al obtener usuarios"}`, http.StatusInternalServerError)
+           return
+       }
+       
+       // 2. Obtener productos
+       products, err := h.listProductsUC.Execute()
+       if err != nil {
+           http.Error(w, `{"error":"error al obtener productos"}`, http.StatusInternalServerError)
+           return
+       }
+       
+       // 3. Extraer categorías únicas (agregación en el handler)
+       categoryMap := make(map[string]bool)
+       for _, p := range products {
+           categoryMap[p.Category] = true
+       }
+       
+       categories := make([]string, 0, len(categoryMap))
+       for cat := range categoryMap {
+           categories = append(categories, cat)
+       }
+       
+       // 4. Construir respuesta
+       response := struct {
+           TotalUsers    int      `json:"total_users"`
+           TotalProducts int      `json:"total_products"`
+           Categories    []string `json:"categories"`
+           ResponseTime  string   `json:"response_time"`
+       }{
+           TotalUsers:    len(users),
+           TotalProducts: len(products),
+           Categories:    categories,
+           ResponseTime:  "~500ms",
+       }
+       
+       // 5. Devolver JSON
+       w.Header().Set("Content-Type", "application/json")
+       json.NewEncoder(w).Encode(response)
+   }
    ```
 
-**PASO 4: Actualizar el Router**
+**PASO 2: Conectar en main.go (Inyección de Dependencias)**
 
-6. Agrega `statsHandler` como parámetro a `SetupRouter`
-7. Activa la ruta: `r.Get("/stats", statsHandler.Get)`
+4. Ve a: `cmd/app/main.go`
+5. En la sección de **handlers**, crea la instancia:
+   ```go
+   // 4️⃣ CREAR HANDLERS HTTP (Capa de Adaptadores)
+   userHandler := handler.NewUserHandler(getUserUC, listUsersUC)
+   productHandler := handler.NewProductHandler(getProductUC, listProductsUC)
+   statusHandler := handler.NewStatusHandler(getStatusUC)
+   
+   // ✅ Handler que orquesta múltiples dominios
+   statsHandler := handler.NewStatsHandler(listUsersUC, listProductsUC)
+   ```
 
-**PASO 5: Prueba**
+**PASO 3: Actualizar la firma del Router**
 
-8. Reinicia el servidor
-9. `curl http://localhost:8080/stats`
+6. Ve a: `internal/infrastructure/http/router.go`
+7. Agrega el parámetro `statsHandler` a la función `SetupRouter`:
+   ```go
+   func SetupRouter(
+       userHandler *handler.UserHandler,
+       productHandler *handler.ProductHandler,
+       statusHandler *handler.StatusHandler,
+       pingHandler *handler.PingHandler,
+       welcomeHandler *handler.WelcomeHandler,
+       statsHandler *handler.StatsHandler,  // ✅ Nuevo parámetro
+   ) *chi.Mux {
+   ```
+
+**PASO 4: Registrar la ruta en el Router**
+
+8. En el mismo archivo `router.go`, registra la ruta:
+   ```go
+   // Estadísticas y monitoreo
+   r.Get("/status", statusHandler.Get)
+   r.Get("/ping", pingHandler.Ping)
+   r.Get("/stats", statsHandler.Get)  // ✅ Nueva ruta
+   ```
+
+**PASO 5: Pasar el handler desde main.go**
+
+9. Vuelve a `cmd/app/main.go`
+10. Actualiza la llamada a `SetupRouter`:
+    ```go
+    // 5️⃣ CONFIGURAR ROUTER (Capa de Infraestructura)
+    router := httpInfra.SetupRouter(
+        userHandler,
+        productHandler,
+        statusHandler,
+        pingHandler,
+        welcomeHandler,
+        statsHandler,  // ✅ Pasar el nuevo handler
+    )
+    ```
+
+**PASO 6: Prueba**
+
+11. Reinicia el servidor: `go run cmd/app/main.go`
+12. Ejecuta: `curl http://localhost:8080/stats`
 
 ### ✅ RESULTADO ESPERADO
 
@@ -2741,31 +3269,87 @@ TOTAL: 38 ejercicios progresivos
 
 ## 💡 CONCEPTOS CLAVE DOMINADOS
 
-### 🔄 El Flujo Cronológico (LO MÁS IMPORTANTE)
+### 🔄 El Flujo Práctico de Desarrollo (LO MÁS IMPORTANTE)
+
+**ORDEN PRÁCTICO** (de afuera hacia adentro - cómo piensas el problema):
 
 ```
-SIEMPRE SEGUIR ESTE ORDEN:
-
 1️⃣ RUTA (router.go)
-   "Defino QUÉ endpoint quiero exponer"
+   "Quiero exponer GET /users/{id}"
+   Comentas temporalmente la ruta para recordar qué construyes
    
 2️⃣ HANDLER (handler/)
-   "Recibo la petición HTTP"
-   "Extraigo parámetros de URL/query"
-   "Valido formato (¿es un número? ¿está vacío?)"
+   "¿Cómo manejo esa petición HTTP?"
+   - Extraigo parámetros de URL/query
+   - Valido formato (¿es un número? ¿está vacío?)
+   - Llamo al caso de uso
+   - Devuelvo JSON
    
 3️⃣ CASO DE USO (usecase/)
-   "Aplico lógica de negocio"
-   "Valido reglas (¿ID entre 1-10? ¿email válido?)"
-   "Llamo al repositorio"
+   "¿Qué lógica de negocio aplico?"
+   - Valido reglas (¿ID entre 1-10? ¿email válido?)
+   - Llamo al repositorio
+   - Devuelvo resultado
    
 4️⃣ REPOSITORIO (adapter/repository/)
-   "Obtengo datos de API externa o BD"
-   "Manejo errores de conexión"
+   "¿De dónde obtengo los datos?"
+   - Actualizo interfaz (dominio)
+   - Implemento método (API/BD)
+   - Manejo errores
    
-5️⃣ DOMINIO (domain/)
-   "Define estructuras y contratos"
-   "Ya suele estar creado"
+5️⃣ MAIN (cmd/app/main.go)
+   "Conecto TODO con inyección de dependencias"
+   - Creo caso de uso (paso repositorio)
+   - Actualizo handler (paso casos de uso)
+   - Paso handler a SetupRouter
+   
+6️⃣ ROUTER (router.go)
+   "Activo la ruta que comenté al inicio"
+   - Agrego parámetro a SetupRouter (si es handler nuevo)
+   - Descomento/registro la ruta
+```
+
+**ORDEN DE EJECUCIÓN** (en runtime, de afuera hacia adentro):
+
+```
+Usuario hace request GET /users/1
+   ↓
+Router detecta la ruta
+   ↓
+Handler recibe petición HTTP
+   ↓
+Caso de Uso aplica lógica de negocio
+   ↓
+Repositorio obtiene datos (API/BD)
+   ↓
+Datos suben de vuelta hasta el usuario
+```
+
+### 📝 Patrón de Nombres (Evita Confusión)
+
+```go
+// ✅ CORRECTO - Alias claros y distintos
+import (
+    userUC "ejercicio-api/internal/usecase/user"
+    productUC "ejercicio-api/internal/usecase/product"
+)
+
+func main() {
+    // Variables descriptivas
+    getUserUsecase := userUC.NewGetUserUsecase(userRepo)
+    listUsersUsecase := userUC.NewListUsersUsecase(userRepo)
+    
+    userHandler := handler.NewUserHandler(getUserUsecase, listUsersUsecase)
+}
+```
+
+```go
+// ❌ INCORRECTO - Nombres confusos
+import welcomeUseCase "ejercicio-api/internal/usecase/welcome"
+
+func main() {
+    welcomeUsecase := welcomeUseCase.NewWelcomeUsecase()  // ❌ Difícil de leer
+}
 ```
 
 ### 🎯 Arquitectura y Patrones
@@ -2783,13 +3367,79 @@ SIEMPRE SEGUIR ESTE ORDEN:
 
 ### 📝 Recordatorios Importantes
 
-✅ **SIEMPRE** empieza por la ruta  
-✅ **NUNCA** empieces por el repositorio o dominio  
-✅ **PRIMERO** piensa en QUÉ necesitas, luego en CÓMO lo obtienes  
+✅ **ORDEN PRÁCTICO**: Ruta → Handler → Caso de Uso → Repositorio → Main  
+✅ **PIENSA DE AFUERA HACIA ADENTRO**: "Quiero /users" → Handler → UC → Repo  
+✅ **MAIN.GO ES CLAVE**: Ahí conectas TODO con inyección de dependencias  
+✅ **NOMBRES CLAROS**: Usa alias distintos (userUC) vs variables (getUserUsecase)  
 ✅ **REUTILIZA** casos de uso existentes cuando sea posible  
 ✅ **VALIDA** en dos capas: formato en handler, negocio en caso de uso  
+✅ **HANDLER ORQUESTA**: Puede llamar múltiples casos de uso  
+✅ **USECASE INDEPENDIENTE**: No debe llamar otros UseCases (salvo transacciones)  
 ✅ **PRUEBA** después de cada paso importante  
 ✅ **LEE** el ejercicio completo antes de empezar
+
+### 🎯 Ejemplo Rápido del Flujo Completo (Orden Práctico)
+
+```go
+// 1️⃣ RUTA - "Quiero exponer GET /users/{id}"
+// router.go - Comentas temporalmente
+// r.Get("/users/{id}", userHandler.GetByID)
+
+// 2️⃣ HANDLER - "¿Cómo manejo esa petición?"
+type UserHandler struct {
+    getUserUC *userUC.GetUserUsecase  // Necesito un caso de uso
+}
+
+func (h *UserHandler) GetByID(w http.ResponseWriter, r *http.Request) {
+    id := chi.URLParam(r, "id")  // Extraigo parámetros
+    // ... valido formato ...
+    user, err := h.getUserUC.Execute(idInt)  // Llamo caso de uso
+    // ... devuelvo JSON ...
+}
+
+// 3️⃣ CASO DE USO - "¿Qué lógica de negocio aplico?"
+type GetUserUsecase struct {
+    repository user.Repository  // Necesito un repositorio
+}
+
+func (uc *GetUserUsecase) Execute(id int) (*user.User, error) {
+    // Valido reglas de negocio
+    if id <= 0 || id > 10 {
+        return nil, errors.New("ID inválido")
+    }
+    return uc.repository.FindByID(id)  // Llamo repositorio
+}
+
+// 4️⃣ REPOSITORIO - "¿De dónde obtengo los datos?"
+type UserAPIRepository struct {
+    baseURL string
+}
+
+func (r *UserAPIRepository) FindByID(id int) (*user.User, error) {
+    // Hago petición HTTP a API externa
+    resp, _ := http.Get(fmt.Sprintf("%s/users/%d", r.baseURL, id))
+    // ... proceso respuesta ...
+    return &user, nil
+}
+
+// 5️⃣ MAIN - "Conecto todo"
+func main() {
+    // Crear instancias (de adentro hacia afuera)
+    userRepo := repository.NewUserAPIRepository("https://api.com")
+    getUserUC := userUC.NewGetUserUsecase(userRepo)
+    userHandler := handler.NewUserHandler(getUserUC)
+    router := httpInfra.SetupRouter(userHandler)
+    
+    http.ListenAndServe(":8080", router)
+}
+
+// 6️⃣ ROUTER - "Activo la ruta que comenté"
+func SetupRouter(userHandler *handler.UserHandler) *chi.Mux {
+    r := chi.NewRouter()
+    r.Get("/users/{id}", userHandler.GetByID)  // ✅ Activada
+    return r
+}
+```
 
 ## 🎖️ HABILIDADES ADQUIRIDAS
 
@@ -2829,15 +3479,28 @@ Usa esta lista cada vez que hagas un ejercicio:
 - [ ] Sé en qué nivel estoy (básico/intermedio/avanzado)
 - [ ] El servidor está corriendo en otra terminal
 
-### Durante el Desarrollo (sigue este orden)
-- [ ] **PASO 1**: Comenté la ruta en `router.go`
-- [ ] **PASO 2**: Creé/modifiqué el Handler
-- [ ] **PASO 3**: Creé el Caso de Uso (si es necesario)
-- [ ] **PASO 4**: Definí el Dominio (si es necesario)
-- [ ] **PASO 5**: Implementé el Repositorio (si es necesario)
-- [ ] **PASO 6**: Conecté todo en el Router
+### Durante el Desarrollo (orden práctico - de afuera hacia adentro)
+- [ ] **PASO 1**: Comenté la ruta en `router.go` (para recordar qué construyo)
+- [ ] **PASO 2**: Actualicé el Handler
+  - [ ] Agregué el nuevo caso de uso al struct
+  - [ ] Actualicé el constructor
+  - [ ] Creé el método que maneja la petición HTTP
+- [ ] **PASO 3**: Creé el Caso de Uso (lógica de negocio)
+  - [ ] Creé el archivo en `usecase/`
+  - [ ] Implementé la lógica usando el repositorio
+- [ ] **PASO 4**: Actualicé el Repositorio (si es necesario)
+  - [ ] Agregué método a la interfaz (dominio)
+  - [ ] Implementé el método en el repositorio
+- [ ] **PASO 5**: Conecté en `main.go` (inyección de dependencias)
+  - [ ] Creé instancia del caso de uso (pasé repositorio)
+  - [ ] Actualicé la creación del handler (pasé casos de uso)
+  - [ ] Actualicé `SetupRouter()` (pasé handler si es nuevo)
+- [ ] **PASO 6**: Activé la ruta en `router.go`
+  - [ ] Agregué parámetro a `SetupRouter()` (si es handler nuevo)
+  - [ ] Descomentè/registré la ruta: `r.Get("/endpoint", handler.Method)`
 - [ ] Revisé que no haya errores de compilación
-- [ ] Los imports están correctos
+- [ ] Los imports están correctos con **alias claros** (userUC, productUC)
+- [ ] Los nombres de variables son **distintos** a los imports
 
 ### Después de Implementar
 - [ ] Reinicié el servidor

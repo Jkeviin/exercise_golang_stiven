@@ -1,7 +1,7 @@
 package handler
 
 import (
-	userUsecase "ejercicio-api/internal/usecase/user"
+	userUC "ejercicio-api/internal/usecase/user"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -10,14 +10,14 @@ import (
 )
 
 type UserHandler struct {
-	getUserUC    *userUsecase.GetUserUsecase
-	getUserAllUc *userUsecase.GetUserAllUsecase
+	getUserUC    *userUC.GetUserUsecase
+	getUserAllUC *userUC.GetUserAllUsecase
 }
 
-func NewUserHandler(getUserUC *userUsecase.GetUserUsecase, getUserAllUc *userUsecase.GetUserAllUsecase) *UserHandler {
+func NewUserHandler(getUserUC *userUC.GetUserUsecase, getUserAllUC *userUC.GetUserAllUsecase) *UserHandler {
 	return &UserHandler{
 		getUserUC:    getUserUC,
-		getUserAllUc: getUserAllUc,
+		getUserAllUC: getUserAllUC,
 	}
 }
 
@@ -26,13 +26,13 @@ func (h *UserHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 
 	id, err := strconv.Atoi(idParam)
 	if err != nil {
-		http.Error(w, "ID inválido", http.StatusBadRequest)
+		http.Error(w, `{"error":"ID inválido"}`, http.StatusBadRequest)
 		return
 	}
 
 	user, err := h.getUserUC.Execute(id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusBadRequest)
 		return
 	}
 
@@ -41,12 +41,12 @@ func (h *UserHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) GetAll(w http.ResponseWriter, r *http.Request) {
-
-	users, err := h.getUserAllUc.Execute()
+	users, err := h.getUserAllUC.Execute()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 		return
 	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(users)
 }

@@ -14,9 +14,11 @@ go mod tidy
 go run cmd/app/main.go
 
 # Probar endpoints
-curl http://localhost:8080/status
-curl http://localhost:8080/ping
-curl http://localhost:8080/users/1
+curl http://localhost:8080/          # Bienvenida
+curl http://localhost:8080/status    # Estado del servidor
+curl http://localhost:8080/ping      # Health check
+curl http://localhost:8080/users     # Lista de usuarios
+curl http://localhost:8080/users/1   # Usuario específico
 ```
 
 ### Windows:
@@ -80,22 +82,28 @@ ejercicio-api/
 │   │   │   └── repository.go             # Interface del repositorio
 │   │   ├── status/
 │   │   │   └── status.go                 # Entidad Status
-│   │   └── ping/
-│   │       └── ping.go                   # Entidad Ping
+│   │   ├── ping/
+│   │   │   └── ping.go                   # Entidad Ping
+│   │   └── welcome/
+│   │       └── welcome.go                # Entidad Welcome
 │   │
 │   ├── usecase/                          # CAPA DE APLICACIÓN
 │   │   ├── user/
-│   │   │   └── get_user.go               # Caso de uso: Obtener usuario
+│   │   │   ├── get_user.go               # Caso de uso: Obtener usuario
+│   │   │   └── get_user_all.go           # Caso de uso: Listar usuarios
 │   │   ├── status/
 │   │   │   └── get_status.go             # Caso de uso: Obtener status
-│   │   └── ping/
-│   │       └── ping.go                   # Caso de uso: Ping
+│   │   ├── ping/
+│   │   │   └── ping.go                   # Caso de uso: Ping
+│   │   └── welcome/
+│   │       └── get_welcome.go            # Caso de uso: Bienvenida
 │   │
 │   ├── adapter/                          # CAPA DE ADAPTADORES
 │   │   ├── http/handler/                 # Handlers HTTP
 │   │   │   ├── user_handler.go
 │   │   │   ├── status_handler.go
-│   │   │   └── ping_handler.go
+│   │   │   ├── ping_handler.go
+│   │   │   └── welcome_handler.go
 │   │   └── repository/
 │   │       └── user_api_repository.go    # Implementación del repositorio
 │   │
@@ -117,9 +125,11 @@ ejercicio-api/
 
 | Ruta | Descripción |
 |------|-------------|
+| `GET /` | Mensaje de bienvenida y lista de endpoints |
 | `GET /status` | Estado del servidor con uptime |
 | `GET /ping` | Health check |
 | `GET /users/{id}` | Usuario por ID (API externa) |
+| `GET /users` | Lista de todos los usuarios |
 
 ## 🏛️ Principios Aplicados
 
@@ -206,3 +216,4 @@ scripts\help.bat      # Ver ayuda
 - ✅ Tests aislados (mocks)
 - ✅ Separación clara de responsabilidades
 - ✅ Código escalable y mantenible
+

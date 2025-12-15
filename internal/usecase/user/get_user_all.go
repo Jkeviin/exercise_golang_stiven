@@ -2,19 +2,19 @@ package user
 
 import (
 	"ejercicio-api/internal/domain/user"
+	"ejercicio-api/internal/repository"
 )
 
 type GetUserAllUsecase struct {
-	userRepo user.Repository
+	userRepo repository.UserRepository
 }
 
-func NewGetUserAllUsecase(userRepo user.Repository) *GetUserAllUsecase {
+func NewGetUserAllUsecase(userRepo repository.UserRepository) *GetUserAllUsecase {
 	return &GetUserAllUsecase{
 		userRepo: userRepo,
 	}
 }
 
-func (uc *GetUserAllUsecase) Execute() (*user.Users, error) {
-
+func (uc *GetUserAllUsecase) Execute() ([]*user.User, error) {
 	return uc.userRepo.FindAll()
 }

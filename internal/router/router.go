@@ -1,8 +1,8 @@
-package http
+package router
 
 import (
-	"ejercicio-api/internal/adapter/http/handler"
 	"ejercicio-api/internal/config"
+	"ejercicio-api/internal/handler"
 	"fmt"
 	"net/http"
 
@@ -10,33 +10,30 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-// SetupRouter configura el router HTTP con los handlers ya inicializados
-// Esta función pertenece a la capa de INFRAESTRUCTURA
+// Setup configura el router HTTP con los handlers ya inicializados
 // Responsabilidad: Configurar rutas, middleware y conectar handlers
-func SetupRouter(
+func Setup(
 	userHandler *handler.UserHandler,
 	statusHandler *handler.StatusHandler,
 	pingHandler *handler.PingHandler,
 	welcomeHandler *handler.WelcomeHandler,
 ) *chi.Mux {
-	// Crear router chi
 	r := chi.NewRouter()
 
-	// Middleware: funciones que se ejecutan antes de los handlers
+	// Middleware
 	r.Use(middleware.Logger)    // Log de cada request
 	r.Use(middleware.Recoverer) // Recuperación de panics
 	r.Use(middleware.RequestID) // ID único por request
-	// REGISTRAR RUTAS
-	// Cada ruta conecta un endpoint HTTP con un handler
 
 	// Health checks
-	r.Get("/status", statusHandler.Get) // Estado del servidor
-	r.Get("/ping", pingHandler.Ping)    // Verificación rápida
+	r.Get("/status", statusHandler.Get)
+	r.Get("/ping", pingHandler.Ping)
 	r.Get("/", welcomeHandler.Welcome)
 
-	// Rutas de negocio
+	// Rutas de usuarios
+	r.Get("/users", userHandler.GetAll)       // Listar usuarios
 	r.Get("/users/{id}", userHandler.GetByID) // Obtener usuario por ID
-	r.Get("/users", userHandler.GetAll)       // Obetener usarios
+
 	return r
 }
 
@@ -45,3 +42,4 @@ func Start(cfg *config.Config, router *chi.Mux) error {
 	addr := fmt.Sprintf(":%s", cfg.ServerPort)
 	return http.ListenAndServe(addr, router)
 }
+
