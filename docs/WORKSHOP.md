@@ -115,9 +115,60 @@ type User struct {
 }
 ```
 
+### ⚠️ IMPORTANTE: Cuándo usar Handler vs UseCase
+
+**📌 REGLA DE ORO:**
+
+**Handler orquesta → UseCase ejecuta lógica de negocio → Repository obtiene datos**
+
+#### ✅ El HANDLER debe:
+- ✅ Orquestar llamadas a **múltiples** UseCases
+- ✅ Combinar resultados de diferentes fuentes
+- ✅ Hacer transformaciones simples (formateo, conteo, ordenamiento)
+- ✅ Aplicar filtros en memoria
+- ✅ Construir respuestas HTTP específicas
+- ✅ Manejar parámetros de query/URL
+
+#### ✅ El USECASE debe:
+- ✅ Implementar **UNA** regla de negocio específica
+- ✅ Validar datos de negocio
+- ✅ Llamar al Repositorio para obtener/guardar datos
+- ✅ Aplicar lógica de dominio compleja
+- ✅ Ser **independiente** de otros UseCases
+- ✅ Ser **reutilizable** desde diferentes Handlers
+
+#### ❌ El USECASE NO debe:
+- ❌ Llamar a otros UseCases (eso es orquestación = responsabilidad del Handler)
+- ❌ Conocer detalles de HTTP (códigos de estado, headers, JSON)
+- ❌ Combinar datos solo para presentación (el Handler lo hace)
+
+#### 🤔 ¿Cuándo SÍ crear un UseCase que use otro UseCase?
+
+**SOLO** si representa una **transacción atómica de negocio**:
+
+```go
+// ✅ VÁLIDO: Transferencia bancaria (transacción atómica)
+type TransferMoneyUsecase struct {
+    debitUC  *DebitAccountUsecase
+    creditUC *CreditAccountUsecase
+}
+// Razón: "Transferir dinero" ES una regla de negocio que debe ser atómica
+```
+
+```go
+// ❌ INVÁLIDO: Combinar usuario + status (solo presentación)
+type GetUserInfoUsecase struct {
+    getUserUC   *GetUserUsecase
+    getStatusUC *GetStatusUsecase
+}
+// Razón: No es una regla de negocio, es solo combinar datos para el frontend
+// Solución: El Handler lo hace directamente
+```
+
 ### ⚠️ IMPORTANTE: Antes de empezar
 
 - ✅ Asegúrate de entender el flujo Ruta → Handler → Caso de Uso → Repositorio
+- ✅ Entiende **cuándo el Handler orquesta** vs **cuándo crear un UseCase**
 - ✅ Lee cada ejercicio COMPLETO antes de escribir código
 - ✅ Sigue los pasos numerados en orden
 - ✅ Prueba después de cada paso importante
@@ -612,6 +663,26 @@ Agregaste una métrica simple de uso del endpoint.
 
 El equipo frontend hace dos llamadas separadas: una a `/users/1` y otra a `/status`. Para mejorar el rendimiento, necesitamos un nuevo endpoint `/user-info/{id}` que devuelva ambos datos en una sola respuesta.
 
+### 🏛️ ARQUITECTURA CORRECTA
+
+**⚠️ IMPORTANTE**: En este ejercicio, el **Handler orquesta** múltiples casos de uso, NO creamos un UseCase que llame a otros.
+
+**✅ CORRECTO (Handler orquesta)**:
+```
+Handler → Llama GetUserUsecase
+       → Llama GetStatusUsecase  
+       → Combina resultados
+       → Devuelve JSON
+```
+
+**❌ INCORRECTO (UseCase orquesta otros UseCases)**:
+```
+Handler → GetUserInfoUsecase → GetUserUsecase
+                             → GetStatusUsecase
+```
+
+**¿Por qué?** El Handler es responsable de la orquestación HTTP, los UseCases deben ser independientes y reutilizables.
+
 ### 🎯 INSTRUCCIONES
 
 **PASO 1: Registrar la ruta**
@@ -622,50 +693,57 @@ El equipo frontend hace dos llamadas separadas: una a `/users/1` y otra a `/stat
    // r.Get("/user-info/{id}", userInfoHandler.GetByID)
    ```
 
-**PASO 2: Crear el Handler**
+**PASO 2: Crear el Handler (AQUÍ VA LA ORQUESTACIÓN)**
 
 3. En `internal/adapter/http/handler/`
 4. Crea archivo: `user_info_handler.go`
-5. Crea `UserInfoHandler` que necesita el caso de uso
-6. Crea el método `GetByID`:
-   - Extrae el parámetro `id` de la URL
-   - Valida que sea un número
-   - Llama al caso de uso
-   - Devuelve el resultado en JSON
+5. Crea `UserInfoHandler` que **recibe AMBOS casos de uso**:
+   ```go
+   type UserInfoHandler struct {
+       getUserUC   *userUsecase.GetUserUsecase
+       getStatusUC *statusUsecase.GetStatusUsecase
+   }
+   ```
 
-**PASO 3: Crear el Caso de Uso**
+6. Crea el método `GetByID` que **orquesta**:
+   - Extrae y valida el parámetro `id` de la URL
+   - **Llama directamente** a `h.getUserUC.Execute(id)`
+   - **Llama directamente** a `h.getStatusUC.Execute()`
+   - **Combina resultados** en una estructura anónima:
+     ```go
+     response := struct {
+         User         *user.User     `json:"user"`
+         ServerStatus *status.Status `json:"server_status"`
+     }{
+         User:         userData,
+         ServerStatus: statusData,
+     }
+     ```
+   - Devuelve la respuesta en JSON
 
-7. Crea carpeta: `internal/usecase/userinfo/`
-8. Crea archivo: `get_user_info.go`
-9. Crea `GetUserInfoUsecase` que necesita:
-   - El caso de uso de GetUser
-   - El caso de uso de GetStatus
-10. En el método `Execute(id int)`:
-    - Llama a getUserUsecase.Execute(id)
-    - Llama a getStatusUsecase.Execute()
-    - Combina ambos resultados
-    - Devuelve la estructura completa
+**PASO 3: Conectar en main.go**
 
-**PASO 4: Crear el Dominio**
+7. Ve a: `cmd/app/main.go`
+8. En la sección de handlers, crea el handler pasándole **ambos casos de uso**:
+   ```go
+   userInfoHandler := handler.NewUserInfoHandler(getUserUsecase, getStatusUsecase)
+   ```
 
-11. Crea carpeta: `internal/domain/userinfo/`
-12. Crea archivo: `user_info.go`
-13. Define `UserInfo` con dos campos:
-    - `User *user.User`
-    - `ServerStatus *status.Status`
+**PASO 4: Actualizar el Router**
 
-**PASO 5: Conectar en el Router**
+9. Ve a: `internal/infrastructure/http/router.go`
+10. Agrega el parámetro `userInfoHandler` a la función `SetupRouter`
+11. Activa la ruta: `r.Get("/user-info/{id}", userInfoHandler.GetByID)`
 
-14. Vuelve a `router.go`
-15. Crea la instancia del caso de uso (pasándole los otros dos casos de uso)
-16. Crea el handler
-17. Activa la ruta: `r.Get("/user-info/{id}", userInfoHandler.GetByID)`
+**PASO 5: Actualizar main.go para pasar el handler**
+
+12. En `cmd/app/main.go`, cuando llamas a `SetupRouter`, pasa el nuevo handler
+13. Reinicia el servidor
 
 **PASO 6: Prueba**
 
-18. Reinicia el servidor
-19. Ejecuta: `curl http://localhost:8080/user-info/1`
-20. Debe mostrar usuario + status en una respuesta
+14. Ejecuta: `curl http://localhost:8080/user-info/1`
+15. Debe mostrar usuario + status en una respuesta
 
 ### ✅ RESULTADO ESPERADO
 
@@ -676,9 +754,20 @@ El equipo frontend hace dos llamadas separadas: una a `/users/1` y otra a `/stat
 }
 ```
 
-### 💡 LO QUE HICISTE
+### 💡 LO QUE APRENDISTE
 
-Creaste un endpoint optimizado que combina múltiples fuentes de datos, reduciendo las peticiones del cliente.
+**Conceptos Clave**:
+- ✅ El **Handler orquesta** llamadas a múltiples casos de uso
+- ✅ Los **UseCases permanecen independientes** y reutilizables
+- ✅ No creamos UseCases que solo llamen a otros UseCases
+- ✅ La **composición de datos** ocurre en el Handler (capa de adaptador HTTP)
+- ✅ Cada UseCase tiene una sola responsabilidad
+
+**Ventajas de este enfoque**:
+- Los UseCases son 100% reutilizables desde CLI, Workers, Tests, otros Handlers
+- No hay acoplamiento entre casos de uso
+- Más fácil de testear cada pieza independientemente
+- Respeta el principio de responsabilidad única
 
 ---
 
@@ -1883,7 +1972,18 @@ Para el dashboard, necesitamos `/stats` que muestre:
 - Categorías de productos únicas
 - Tiempo de respuesta promedio estimado
 
-**NOTA**: Este es tu primer ejercicio que combina MÚLTIPLES casos de uso.
+### 🏛️ ARQUITECTURA CORRECTA
+
+**✅ CORRECTO**: El **Handler orquesta** múltiples casos de uso y procesa/agrega los datos.
+
+```
+StatsHandler → Llama ListUsersUsecase → Cuenta total
+             → Llama ListProductsUsecase → Cuenta total + extrae categorías
+             → Construye respuesta agregada
+             → Devuelve JSON
+```
+
+**NO** creamos un `GetStatsUsecase` que llame a otros UseCases. Los cálculos simples (conteos, agregaciones) se hacen en el Handler.
 
 ### 🎯 INSTRUCCIONES
 
@@ -1894,44 +1994,53 @@ Para el dashboard, necesitamos `/stats` que muestre:
    // r.Get("/stats", statsHandler.Get)
    ```
 
-**PASO 2: Crear el Handler**
+**PASO 2: Crear el Handler (ORQUESTACIÓN Y AGREGACIÓN)**
 
 2. Crea: `internal/adapter/http/handler/stats_handler.go`
-3. Define `StatsHandler` con el caso de uso
-4. Implementa `Get` que llame al caso de uso y devuelva JSON
+3. Define `StatsHandler` que recibe **ambos casos de uso**:
+   ```go
+   type StatsHandler struct {
+       listUsersUC    *userUsecase.ListUsersUsecase
+       listProductsUC *productUsecase.ListProductsUsecase
+   }
+   ```
 
-**PASO 3: Crear el Caso de Uso (¡IMPORTANTE!)**
+4. Implementa el método `Get`:
+   - Llama a `h.listUsersUC.Execute()` y cuenta: `len(users)`
+   - Llama a `h.listProductsUC.Execute()` y cuenta: `len(products)`
+   - Extrae categorías únicas usando un `map[string]bool`
+   - Construye la respuesta con estructura anónima:
+     ```go
+     response := struct {
+         TotalUsers    int      `json:"total_users"`
+         TotalProducts int      `json:"total_products"`
+         Categories    []string `json:"categories"`
+         ResponseTime  string   `json:"response_time"`
+     }{
+         TotalUsers:    len(users),
+         TotalProducts: len(products),
+         Categories:    categories,
+         ResponseTime:  "~500ms",
+     }
+     ```
+   - Devuelve JSON
 
-5. Crea carpeta: `internal/usecase/stats/`
-6. Crea: `get_stats.go`
-7. Implementa `GetStatsUsecase` que **necesita DOS casos de uso**:
-   - El caso de uso ListUsers
-   - El caso de uso ListProducts
-8. En `Execute()`:
-   - Obtiene todos los usuarios y cuenta cuántos son
-   - Obtiene todos los productos y cuenta cuántos son
-   - Extrae las categorías únicas de los productos
-   - Devuelve las estadísticas
+**PASO 3: Conectar en main.go**
 
-**PASO 4: Crear el Dominio**
+5. Crea el handler pasándole ambos casos de uso:
+   ```go
+   statsHandler := handler.NewStatsHandler(listUsersUsecase, listProductsUsecase)
+   ```
 
-9. Crea carpeta: `internal/domain/stats/`
-10. Crea: `stats.go`
-11. Define `Stats` con:
-    - TotalUsers (int)
-    - TotalProducts (int)
-    - Categories ([]string)
-    - ResponseTime (string) - fijo: "~500ms"
+**PASO 4: Actualizar el Router**
 
-**PASO 5: Conectar en el Router**
+6. Agrega `statsHandler` como parámetro a `SetupRouter`
+7. Activa la ruta: `r.Get("/stats", statsHandler.Get)`
 
-12. Crea el caso de uso (pásale los casos de uso de users y products)
-13. Crea el handler
-14. Activa la ruta
+**PASO 5: Prueba**
 
-**PASO 6: Prueba**
-
-15. `curl http://localhost:8080/stats`
+8. Reinicia el servidor
+9. `curl http://localhost:8080/stats`
 
 ### ✅ RESULTADO ESPERADO
 
@@ -1944,9 +2053,13 @@ Para el dashboard, necesitamos `/stats` que muestre:
 }
 ```
 
-### 💡 LO QUE HICISTE
+### 💡 LO QUE APRENDISTE
 
-**¡Primer endpoint avanzado!** Combinaste múltiples fuentes de datos usando varios casos de uso juntos.
+**Conceptos Clave**:
+- ✅ Agregaciones simples (conteos, filtros) van en el **Handler**
+- ✅ UseCases devuelven datos crudos, el Handler los transforma
+- ✅ No necesitas un UseCase para cada endpoint si solo combinas datos
+- ✅ El Handler puede hacer lógica de presentación (formateo, agregación simple)
 
 ---
 
@@ -1958,6 +2071,17 @@ Crea un endpoint `/users/{id}/profile` que devuelva:
 - Información completa del usuario
 - Total de usuarios en el sistema (para mostrar "Usuario X de Y")
 - Un mensaje personalizado: "Perfil de [nombre]"
+
+### 🏛️ ARQUITECTURA CORRECTA
+
+**✅ CORRECTO**: Handler orquesta y formatea.
+
+```
+UserProfileHandler → Llama GetUserUsecase(id)
+                   → Llama ListUsersUsecase → cuenta len()
+                   → Construye mensaje personalizado
+                   → Devuelve JSON
+```
 
 ### 🎯 INSTRUCCIONES
 
@@ -1971,35 +2095,31 @@ Crea un endpoint `/users/{id}/profile` que devuelva:
 **PASO 2: Crear el Handler**
 
 2. Crea: `internal/adapter/http/handler/user_profile_handler.go`
-3. Implementa el handler con extracción de ID y llamada al caso de uso
+3. Define `UserProfileHandler` con ambos casos de uso:
+   ```go
+   type UserProfileHandler struct {
+       getUserUC     *userUsecase.GetUserUsecase
+       listUsersUC   *userUsecase.ListUsersUsecase
+   }
+   ```
 
-**PASO 3: Crear el Caso de Uso**
+4. Implementa el método `Get`:
+   - Extrae y valida el ID
+   - Llama a `h.getUserUC.Execute(id)`
+   - Llama a `h.listUsersUC.Execute()` y obtiene `len(users)`
+   - Construye mensaje: `"Perfil de " + user.Name`
+   - Crea respuesta con estructura anónima
+   - Devuelve JSON
 
-4. Crea carpeta: `internal/usecase/userprofile/`
-5. Crea: `get_user_profile.go`
-6. Necesita los casos de uso GetUser y ListUsers
-7. En `Execute(id)`:
-   - Obtiene el usuario por ID
-   - Obtiene todos los usuarios y cuenta el total
-   - Crea el mensaje personalizado
-   - Devuelve la estructura completa
+**PASO 3: Conectar en main.go y router**
 
-**PASO 4: Crear el Dominio**
+5. Crea el handler pasándole ambos casos de uso
+6. Regístralo en el router
+7. Activa la ruta
 
-8. Crea carpeta: `internal/domain/userprofile/`
-9. Crea: `user_profile.go`
-10. Define con:
-    - User (*user.User)
-    - TotalUsers (int)
-    - Message (string)
+**PASO 4: Prueba**
 
-**PASO 5: Conectar en el Router**
-
-11. Crea caso de uso, handler y ruta
-
-**PASO 6: Prueba**
-
-12. `curl http://localhost:8080/users/1/profile`
+8. `curl http://localhost:8080/users/1/profile`
 
 ### ✅ RESULTADO ESPERADO
 
@@ -2011,9 +2131,9 @@ Crea un endpoint `/users/{id}/profile` que devuelva:
 }
 ```
 
-### 💡 LO QUE HICISTE
+### 💡 LO QUE APRENDISTE
 
-Combinaste datos de múltiples fuentes y agregaste lógica de presentación personalizada.
+El Handler puede hacer **lógica de presentación** como formatear mensajes y combinar datos sin necesidad de un UseCase adicional.
 
 ---
 
@@ -2025,6 +2145,19 @@ Para monitoreo, crea `/health` que verifique:
 - Si la API de usuarios responde (intenta obtener usuario 1)
 - Si la API de productos responde (intenta obtener producto 1)
 - Estado general: "healthy" si ambos funcionan, "degraded" si falla uno, "unhealthy" si fallan ambos
+
+### 🏛️ ARQUITECTURA CORRECTA
+
+**✅ CORRECTO**: El Handler puede usar **UseCases existentes** para verificar salud.
+
+```
+HealthHandler → Llama GetUserUsecase(1) → verifica si responde
+              → Llama GetProductUsecase(1) → verifica si responde
+              → Determina estado según resultados
+              → Devuelve JSON
+```
+
+**Alternativa válida**: Usar repositorios directamente si necesitas verificar conectividad a bajo nivel.
 
 ### 🎯 INSTRUCCIONES
 
@@ -2038,37 +2171,42 @@ Para monitoreo, crea `/health` que verifique:
 **PASO 2: Crear el Handler**
 
 2. Crea: `internal/adapter/http/handler/health_handler.go`
-3. Implementa el handler que llame al caso de uso
+3. Define `HealthHandler` que recibe ambos casos de uso:
+   ```go
+   type HealthHandler struct {
+       getUserUC    *userUsecase.GetUserUsecase
+       getProductUC *productUsecase.GetProductUsecase
+   }
+   ```
 
-**PASO 3: Crear el Caso de Uso**
+4. Implementa el método `Check`:
+   - Intenta `h.getUserUC.Execute(1)` y verifica si hay error
+   - Intenta `h.getProductUC.Execute(1)` y verifica si hay error
+   - Calcula el estado:
+     ```go
+     usersOK := (errUser == nil)
+     productsOK := (errProduct == nil)
+     
+     var status string
+     if usersOK && productsOK {
+         status = "healthy"
+     } else if usersOK || productsOK {
+         status = "degraded"
+     } else {
+         status = "unhealthy"
+     }
+     ```
+   - Construye respuesta con estructura anónima
+   - **Siempre devuelve 200 OK** (el health check no debe fallar)
 
-4. Crea carpeta: `internal/usecase/health/`
-5. Crea: `check_health.go`
-6. Necesita ambos repositorios (user y product)
-7. En `Execute()`:
-   - Intenta hacer FindByID(1) en el repo de usuarios
-   - Intenta hacer FindByID(1) en el repo de productos
-   - Determina el estado según los resultados
-   - No devuelve error, siempre devuelve la estructura
+**PASO 3: Conectar en main.go y router**
 
-**PASO 4: Crear el Dominio**
+5. Crea el handler pasándole ambos casos de uso
+6. Regístralo y activa la ruta
 
-8. Crea carpeta: `internal/domain/health/`
-9. Crea: `health.go`
-10. Define con:
-    - Status (string): "healthy", "degraded", "unhealthy"
-    - UsersAPI (bool)
-    - ProductsAPI (bool)
-    - Timestamp (string)
+**PASO 4: Prueba**
 
-**PASO 5: Conectar en el Router**
-
-11. Crea caso de uso (pásale ambos repositorios)
-12. Crea handler y ruta
-
-**PASO 6: Prueba**
-
-13. `curl http://localhost:8080/health`
+7. `curl http://localhost:8080/health`
 
 ### ✅ RESULTADO ESPERADO
 
@@ -2081,9 +2219,9 @@ Para monitoreo, crea `/health` que verifique:
 }
 ```
 
-### 💡 LO QUE HICISTE
+### 💡 LO QUE APRENDISTE
 
-Implementaste un health check que verifica dependencias externas, útil para sistemas de monitoreo.
+Un health check es un caso especial donde el Handler **verifica conectividad** usando UseCases o repositorios existentes. No necesita su propio UseCase dedicado.
 
 ---
 
@@ -2095,9 +2233,22 @@ Crea `/summary` que devuelva un resumen ejecutivo de toda la API:
 - Mensaje de bienvenida
 - Versión
 - Total de recursos (usuarios + productos)
-- Estado de salud
+- Estado de salud (simulado: "healthy")
 - Endpoints disponibles
 - Última actualización (timestamp)
+
+### 🏛️ ARQUITECTURA CORRECTA
+
+**✅ CORRECTO**: Handler orquesta múltiples casos de uso y agrega datos.
+
+```
+SummaryHandler → Llama GetStatusUsecase → extrae versión
+               → Llama ListUsersUsecase → cuenta
+               → Llama ListProductsUsecase → cuenta
+               → Construye lista de endpoints
+               → Agrega todo en respuesta
+               → Devuelve JSON
+```
 
 ### 🎯 INSTRUCCIONES
 
@@ -2105,39 +2256,35 @@ Crea `/summary` que devuelva un resumen ejecutivo de toda la API:
 
 1. En `router.go`, comenta: `// r.Get("/summary", summaryHandler.Get)`
 
-**PASO 2: Crear el Handler**
+**PASO 2: Crear el Handler (ORQUESTACIÓN COMPLEJA)**
 
 2. Crea: `internal/adapter/http/handler/summary_handler.go`
-3. Implementa con el caso de uso
+3. Define `SummaryHandler` con los casos de uso necesarios:
+   ```go
+   type SummaryHandler struct {
+       getStatusUC    *statusUsecase.GetStatusUsecase
+       listUsersUC    *userUsecase.ListUsersUsecase
+       listProductsUC *productUsecase.ListProductsUsecase
+   }
+   ```
 
-**PASO 3: Crear el Caso de Uso**
+4. Implementa el método `Get`:
+   - Llama a `h.getStatusUC.Execute()` para obtener versión
+   - Llama a `h.listUsersUC.Execute()` y cuenta
+   - Llama a `h.listProductsUC.Execute()` y cuenta
+   - Calcula total: `len(users) + len(products)`
+   - Define lista de endpoints (hardcoded o dinámica)
+   - Construye respuesta completa con estructura anónima
+   - Devuelve JSON
 
-4. Crea carpeta: `internal/usecase/summary/`
-5. Crea: `get_summary.go`
-6. Necesita múltiples casos de uso:
-   - GetStatus
-   - ListUsers
-   - ListProducts
-   - GetWelcome (o crea el mensaje aquí)
-7. Combina toda la información en una estructura
+**PASO 3: Conectar en main.go y router**
 
-**PASO 4: Crear el Dominio**
+5. Crea el handler pasándole los tres casos de uso
+6. Regístralo y activa la ruta
 
-8. Crea carpeta: `internal/domain/summary/`
-9. Crea: `summary.go`
-10. Define todos los campos necesarios:
-    - Message (string)
-    - Version (string)
-    - TotalResources (int)
-    - HealthStatus (string)
-    - AvailableEndpoints ([]string)
-    - Timestamp (string)
+**PASO 4: Prueba**
 
-**PASO 5: Conectar en el Router y Probar**
-
-11. Crea todas las instancias necesarias
-12. Activa la ruta
-13. Prueba: `curl http://localhost:8080/summary`
+7. `curl http://localhost:8080/summary`
 
 ### ✅ RESULTADO ESPERADO
 
@@ -2152,9 +2299,9 @@ Crea `/summary` que devuelva un resumen ejecutivo de toda la API:
 }
 ```
 
-### 💡 LO QUE HICISTE
+### 💡 LO QUE APRENDISTE
 
-Creaste un endpoint complejo que agrega información de múltiples fuentes, perfecto para dashboards o documentación dinámica.
+Endpoints de "resumen" o "dashboard" son perfectos para que el Handler orqueste, ya que solo agregan datos sin lógica de negocio compleja.
 
 ---
 
@@ -2165,6 +2312,18 @@ Creaste un endpoint complejo que agrega información de múltiples fuentes, perf
 Aunque no tenemos productos por usuario en las APIs, simularemos esta funcionalidad. Crea `/users/{id}/recommended-products` que devuelva:
 - Información del usuario
 - 3 productos aleatorios recomendados para ese usuario
+
+### 🏛️ ARQUITECTURA CORRECTA
+
+**✅ CORRECTO**: Handler orquesta y selecciona productos aleatorios.
+
+```
+RecommendedProductsHandler → Llama GetUserUsecase(id)
+                           → Llama ListProductsUsecase
+                           → Selecciona 3 aleatorios (rand)
+                           → Construye respuesta
+                           → Devuelve JSON
+```
 
 ### 🎯 INSTRUCCIONES
 
@@ -2178,40 +2337,44 @@ Aunque no tenemos productos por usuario en las APIs, simularemos esta funcionali
 **PASO 2: Crear el Handler**
 
 2. Crea: `internal/adapter/http/handler/user_products_handler.go`
-3. Extrae el ID, valida y llama al caso de uso
+3. Define `UserProductsHandler` con ambos casos de uso:
+   ```go
+   type UserProductsHandler struct {
+       getUserUC       *userUsecase.GetUserUsecase
+       listProductsUC  *productUsecase.ListProductsUsecase
+   }
+   ```
 
-**PASO 3: Crear el Caso de Uso**
+4. Implementa el método `GetRecommended`:
+   - Extrae y valida el ID
+   - Llama a `h.getUserUC.Execute(id)`
+   - Llama a `h.listProductsUC.Execute()`
+   - **Selecciona 3 productos aleatorios**:
+     ```go
+     // Importa "math/rand" y "time"
+     rand.Seed(time.Now().UnixNano())
+     recommended := make([]*product.Product, 3)
+     for i := 0; i < 3 && i < len(products); i++ {
+         idx := rand.Intn(len(products))
+         recommended[i] = products[idx]
+     }
+     ```
+   - Construye respuesta con estructura anónima
+   - Devuelve JSON
 
-4. Crea carpeta: `internal/usecase/userproducts/`
-5. Crea: `get_recommended_products.go`
-6. Necesita: GetUserUsecase y ListProductsUsecase
-7. En `Execute(id)`:
-   - Obtiene el usuario
-   - Obtiene todos los productos
-   - Selecciona 3 productos aleatorios (usa `rand.Intn`)
-   - Combina en la estructura de respuesta
+**PASO 3: Conectar y Probar**
 
-**PASO 4: Crear el Dominio**
-
-8. Crea carpeta: `internal/domain/userproducts/`
-9. Crea: `user_recommendations.go`
-10. Define con:
-    - User (*user.User)
-    - RecommendedProducts ([]*product.Product)
-    - RecommendationReason (string) - fijo: "Basado en tus preferencias"
-
-**PASO 5: Conectar y Probar**
-
-11. Conecta todo en el router
-12. Prueba: `curl http://localhost:8080/users/1/recommended-products`
+5. Crea el handler pasándole ambos casos de uso
+6. Regístralo y activa la ruta
+7. `curl http://localhost:8080/users/1/recommended-products`
 
 ### ✅ RESULTADO ESPERADO
 
 El usuario con 3 productos aleatorios cada vez que llames.
 
-### 💡 LO QUE HICISTE
+### 💡 LO QUE APRENDISTE
 
-Combinaste datos de diferentes dominios para crear una funcionalidad nueva y más compleja.
+Lógica de "recomendación" simple (selección aleatoria) es apropiada para el Handler. Si fuera lógica compleja (ML, análisis de comportamiento), sí justificaría un UseCase dedicado.
 
 ---
 
@@ -2221,11 +2384,23 @@ Combinaste datos de diferentes dominios para crear una funcionalidad nueva y má
 
 Crea `/products/compare?ids=1,2,3` que permita comparar varios productos lado a lado.
 
+### 🏛️ ARQUITECTURA CORRECTA
+
+**✅ CORRECTO**: Handler orquesta llamadas y calcula métricas simples.
+
+```
+CompareProductsHandler → Parse IDs de query string
+                       → Llama GetProductUsecase(id) para cada ID
+                       → Calcula precio promedio
+                       → Identifica más barato/caro
+                       → Devuelve JSON
+```
+
 ### 🎯 INSTRUCCIONES
 
 **PASO 1: Registrar la ruta**
 
-1. En `router.go`, comenta:
+1. En `router.go`, comenta (debe ir ANTES de `/products/{id}`):
    ```go
    // r.Get("/products/compare", productHandler.Compare)
    ```
@@ -2233,37 +2408,36 @@ Crea `/products/compare?ids=1,2,3` que permita comparar varios productos lado a 
 **PASO 2: Crear el método en el Handler**
 
 2. En `product_handler.go`
-3. Crea método `Compare`:
+3. Agrega el caso de uso `GetProductUsecase` si no lo tienes ya
+4. Crea método `Compare`:
    - Obtiene el parámetro `ids` (string: "1,2,3")
-   - Separa por comas y convierte a integers
-   - Valida que haya entre 2 y 4 productos
-   - Llama al caso de uso
+   - Separa por comas: `strings.Split(idsParam, ",")`
+   - Convierte cada string a int
+   - Valida que haya entre 2 y 4 IDs
+   - **Para cada ID, llama** a `h.getProductUC.Execute(id)`
+   - **Calcula métricas**:
+     ```go
+     var total float64
+     cheapest := products[0]
+     mostExpensive := products[0]
+     
+     for _, p := range products {
+         total += p.Price
+         if p.Price < cheapest.Price {
+             cheapest = p
+         }
+         if p.Price > mostExpensive.Price {
+             mostExpensive = p
+         }
+     }
+     avgPrice := total / float64(len(products))
+     ```
+   - Construye respuesta con estructura anónima
    - Devuelve JSON
 
-**PASO 3: Crear el Caso de Uso**
+**PASO 3: Prueba**
 
-4. En `internal/usecase/product/`
-5. Crea: `compare_products.go`
-6. Implementa `CompareProductsUsecase`:
-   - Recibe una lista de IDs
-   - Obtiene cada producto usando el repositorio
-   - Calcula el precio promedio
-   - Identifica el más barato y el más caro
-   - Devuelve la estructura de comparación
-
-**PASO 4: Crear el Dominio**
-
-7. En `internal/domain/product/`
-8. Crea: `product_comparison.go`
-9. Define con:
-    - Products ([]*Product)
-    - AveragePrice (float64)
-    - CheapestID (int)
-    - MostExpensiveID (int)
-
-**PASO 5: Conectar y Probar**
-
-10. `curl "http://localhost:8080/products/compare?ids=1,2,3"`
+5. `curl "http://localhost:8080/products/compare?ids=1,2,3"`
 
 ### ✅ RESULTADO ESPERADO
 
@@ -2276,9 +2450,9 @@ Crea `/products/compare?ids=1,2,3` que permita comparar varios productos lado a 
 }
 ```
 
-### 💡 LO QUE HICISTE
+### 💡 LO QUE APRENDISTE
 
-Procesaste múltiples entidades y calculaste métricas agregadas sobre ellas.
+Cálculos de agregación simples (promedio, mín, máx) son apropiados para el Handler. No necesitas un UseCase separado para esto.
 
 ---
 
@@ -2287,29 +2461,59 @@ Procesaste múltiples entidades y calculaste métricas agregadas sobre ellas.
 ### 📋 LO QUE NECESITAMOS
 
 Crea `/dashboard` que sea el endpoint principal de monitoreo con:
-- Estado de salud
-- Estadísticas generales
+- Estado de salud (simulado: "healthy")
+- Total de usuarios y productos
 - Top 3 productos más caros
-- Usuario con ID más alto
 - Timestamp
+
+### 🏛️ ARQUITECTURA CORRECTA
+
+**✅ CORRECTO**: Handler orquesta múltiples UseCases y procesa datos.
+
+```
+DashboardHandler → Llama ListUsersUsecase → cuenta
+                 → Llama ListProductsUsecase → cuenta + ordena top 3
+                 → Simula health status
+                 → Construye respuesta agregada
+                 → Devuelve JSON
+```
 
 ### 🎯 INSTRUCCIONES
 
-**PASO 1-5: Sigue la estructura habitual**
+**PASO 1: Registrar la ruta**
 
-1. Registra la ruta
-2. Crea el handler
-3. Crea el caso de uso que combine:
-   - GetHealth (reutiliza el del ejercicio 33)
-   - GetStats (reutiliza el del ejercicio 31)
-   - ListProducts (para obtener top 3)
-   - ListUsers (para obtener el último)
-4. Crea el dominio con todos los campos
-5. Conecta y prueba
+1. En `router.go`, comenta: `// r.Get("/dashboard", dashboardHandler.Get)`
 
-### 💡 LO QUE HICISTE
+**PASO 2: Crear el Handler**
 
-Creaste un endpoint de dashboard completo que agrega información crítica de múltiples fuentes.
+2. Crea: `internal/adapter/http/handler/dashboard_handler.go`
+3. Define `DashboardHandler` con los casos de uso necesarios
+4. Implementa el método `Get`:
+   - Llama a `listUsersUC` y cuenta
+   - Llama a `listProductsUC`
+   - Ordena productos por precio descendente
+   - Toma los 3 primeros (top 3 más caros)
+   - Construye respuesta con estructura anónima:
+     ```go
+     response := struct {
+         HealthStatus  string              `json:"health_status"`
+         TotalUsers    int                 `json:"total_users"`
+         TotalProducts int                 `json:"total_products"`
+         TopProducts   []*product.Product  `json:"top_3_most_expensive"`
+         Timestamp     string              `json:"timestamp"`
+     }{...}
+     ```
+   - Devuelve JSON
+
+**PASO 3: Conectar y Probar**
+
+5. Crea el handler con los casos de uso necesarios
+6. Regístralo y activa la ruta
+7. `curl http://localhost:8080/dashboard`
+
+### 💡 LO QUE APRENDISTE
+
+Dashboards son el ejemplo perfecto de **orquestación en el Handler**: combinas datos de múltiples fuentes y aplicas transformaciones simples (ordenar, filtrar top N).
 
 ---
 
@@ -2319,28 +2523,58 @@ Creaste un endpoint de dashboard completo que agrega información crítica de m�
 
 Crea `/search?q=john` que busque en AMBOS recursos (usuarios y productos) y devuelva resultados combinados.
 
+### 🏛️ ARQUITECTURA CORRECTA
+
+**✅ OPCIÓN 1 - Handler orquesta (Recomendado para búsqueda simple)**:
+```
+SearchHandler → Llama ListUsersUsecase → filtra por término
+              → Llama ListProductsUsecase → filtra por término
+              → Combina resultados
+              → Devuelve JSON
+```
+
+**✅ OPCIÓN 2 - UseCase dedicado (Si hay lógica compleja)**:
+Si la búsqueda tiene lógica compleja (scoring, relevancia, ponderación), entonces SÍ justifica un `SearchUsecase` porque es una **regla de negocio real**.
+
+Para este ejercicio: **usa Opción 1** (Handler simple).
+
 ### 🎯 INSTRUCCIONES
 
 **PASO 1: Registrar la ruta**
 
-1. Comenta: `// r.Get("/search", globalSearchHandler.Search)`
+1. En `router.go`, comenta: `// r.Get("/search", searchHandler.Search)`
 
-**PASO 2-4: Implementa la búsqueda**
+**PASO 2: Crear el Handler**
 
-2. Crea handler que extraiga el parámetro `q`
-3. Crea caso de uso que:
-   - Busque en usuarios (por nombre, email, username)
-   - Busque en productos (por título, descripción)
-   - Combine ambos resultados
-4. Crea dominio:
-   - MatchedUsers ([]*User)
-   - MatchedProducts ([]*Product)
-   - TotalResults (int)
-   - SearchTerm (string)
+2. Crea: `internal/adapter/http/handler/search_handler.go`
+3. Define `SearchHandler` con ambos casos de uso
+4. Implementa el método `Search`:
+   - Obtiene parámetro `q` de la query
+   - Valida que no esté vacío
+   - Llama a `h.listUsersUC.Execute()`
+   - **Filtra usuarios** que contengan el término en nombre, email o username:
+     ```go
+     term := strings.ToLower(query)
+     matchedUsers := []*user.User{}
+     for _, u := range users {
+         if strings.Contains(strings.ToLower(u.Name), term) ||
+            strings.Contains(strings.ToLower(u.Email), term) ||
+            strings.Contains(strings.ToLower(u.Username), term) {
+             matchedUsers = append(matchedUsers, u)
+         }
+     }
+     ```
+   - Llama a `h.listProductsUC.Execute()`
+   - **Filtra productos** que contengan el término en título o descripción
+   - Calcula total: `len(matchedUsers) + len(matchedProducts)`
+   - Construye respuesta con estructura anónima
+   - Devuelve JSON
 
-**PASO 5: Prueba**
+**PASO 3: Conectar y Probar**
 
-5. `curl "http://localhost:8080/search?q=shirt"`
+5. Crea el handler con ambos casos de uso
+6. Regístralo y activa la ruta
+7. `curl "http://localhost:8080/search?q=shirt"`
 
 ### ✅ RESULTADO ESPERADO
 
@@ -2353,9 +2587,10 @@ Crea `/search?q=john` que busque en AMBOS recursos (usuarios y productos) y devu
 }
 ```
 
-### 💡 LO QUE HICISTE
+### 💡 LO QUE APRENDISTE
 
-Implementaste búsqueda global que combina múltiples recursos, simulando un endpoint de búsqueda real y complejo.
+**Búsqueda simple** (contiene texto) → Handler lo hace.  
+**Búsqueda compleja** (scoring, ML, relevancia) → Sí justifica un UseCase dedicado con lógica de negocio real.
 
 ---
 
@@ -2388,15 +2623,17 @@ Has completado **38 ejercicios progresivos** de desarrollo de APIs REST. Ahora d
 ✅ Manipular strings (truncar, formatear, convertir caso)
 
 ### 🔥 NIVEL AVANZADO (Ejercicios 31-38)
-✅ Crear endpoints de estadísticas con agregación compleja
-✅ Combinar múltiples casos de uso en uno solo
-✅ Implementar health checks con verificación de dependencias
-✅ Construir dashboards con múltiples métricas
-✅ Combinar casos de uso de diferentes dominios
-✅ Crear recomendaciones y comparaciones
+✅ **Orquestar múltiples UseCases desde el Handler** (arquitectura correcta)
+✅ Crear endpoints de estadísticas con agregación en el Handler
+✅ Implementar health checks verificando dependencias externas
+✅ Construir dashboards combinando datos de múltiples fuentes
+✅ Aplicar transformaciones y cálculos simples en el Handler
+✅ Filtrar y procesar datos de diferentes dominios
+✅ Crear recomendaciones y comparaciones con lógica simple
 ✅ Implementar búsqueda global multi-recurso
-✅ Gestionar respuestas complejas con múltiples niveles
+✅ Gestionar respuestas complejas sin acoplar UseCases
 ✅ Diseñar endpoints para monitoreo y observabilidad
+✅ **Entender cuándo SÍ y cuándo NO crear un UseCase dedicado**
 
 ### 🎯 ARQUITECTURA Y MEJORES PRÁCTICAS
 ✅ **Flujo correcto**: Ruta → Handler → Caso de Uso → Repositorio → Dominio
@@ -2451,14 +2688,14 @@ NIVEL INTERMEDIO - ORDENAMIENTO Y AGREGACIÓN (23-30) - ⭐⭐ a ⭐⭐⭐
 └─ Ejercicio 30: Listar categorías únicas
 
 NIVEL AVANZADO (31-38) - ⭐⭐⭐
-├─ Ejercicio 31: Estadísticas de la API ← COMBINA MÚLTIPLES CASOS DE USO
-├─ Ejercicio 32: Perfil completo de usuario
-├─ Ejercicio 33: Health check detallado
-├─ Ejercicio 34: Resumen ejecutivo completo
-├─ Ejercicio 35: Recomendaciones de productos
-├─ Ejercicio 36: Comparación de productos
-├─ Ejercicio 37: Dashboard principal
-└─ Ejercicio 38: Búsqueda global multi-recurso
+├─ Ejercicio 31: Estadísticas de la API ← HANDLER ORQUESTA MÚLTIPLES CASOS DE USO
+├─ Ejercicio 32: Perfil completo de usuario ← HANDLER ORQUESTA Y FORMATEA
+├─ Ejercicio 33: Health check detallado ← HANDLER VERIFICA SALUD DE DEPENDENCIAS
+├─ Ejercicio 34: Resumen ejecutivo completo ← HANDLER AGREGA DATOS DE MÚLTIPLES FUENTES
+├─ Ejercicio 35: Recomendaciones de productos ← HANDLER SELECCIONA ALEATORIAMENTE
+├─ Ejercicio 36: Comparación de productos ← HANDLER CALCULA MÉTRICAS
+├─ Ejercicio 37: Dashboard principal ← HANDLER ORQUESTA Y PROCESA
+└─ Ejercicio 38: Búsqueda global multi-recurso ← HANDLER FILTRA EN MÚLTIPLES DOMINIOS
 
 TOTAL: 38 ejercicios progresivos
 ```
