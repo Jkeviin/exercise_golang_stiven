@@ -18,6 +18,8 @@ func NewGetUserUsecase(userRepo user.Repository) *GetUserUsecase {
 func (uc *GetUserUsecase) Execute(id int) (*user.User, error) {
 	if id <= 0 {
 		return nil, fmt.Errorf("el ID debe ser mayor que 0")
+	} else if id > 10 {
+		return nil, fmt.Errorf("el Id debe ser menor que 10")
 	}
 
 	return uc.userRepo.FindByID(id)

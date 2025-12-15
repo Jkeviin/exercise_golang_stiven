@@ -8,6 +8,7 @@ import (
 	pingUsecase "ejercicio-api/internal/usecase/ping"
 	statusUsecase "ejercicio-api/internal/usecase/status"
 	userUsecase "ejercicio-api/internal/usecase/user"
+	welcomeUseCase "ejercicio-api/internal/usecase/welcome"
 	"log"
 )
 
@@ -22,18 +23,21 @@ func main() {
 	// 3️⃣ CREAR CASOS DE USO (Capa de Aplicación)
 	// Inyectamos los repositorios en los casos de uso
 	getUserUsecase := userUsecase.NewGetUserUsecase(userRepo)
+	getUserAllUseCase := userUsecase.NewGetUserAllUsecase(userRepo)
 	getStatusUsecase := statusUsecase.NewGetStatusUsecase()
 	pingUsecase := pingUsecase.NewPingUsecase()
+	welcomeUseCase := welcomeUseCase.NewWelcomeUseCase()
 
 	// 4️⃣ CREAR HANDLERS HTTP (Capa de Adaptadores)
 	// Inyectamos los casos de uso en los handlers
-	userHandler := handler.NewUserHandler(getUserUsecase)
+	userHandler := handler.NewUserHandler(getUserUsecase, getUserAllUseCase)
 	statusHandler := handler.NewStatusHandler(getStatusUsecase)
 	pingHandler := handler.NewPingHandler(pingUsecase)
+	welcomeHanlder := handler.NewWelcomeHandler(welcomeUseCase)
 
 	// 5️⃣ CONFIGURAR ROUTER (Capa de Infraestructura)
 	// Conectamos las rutas con los handlers
-	router := httpInfra.SetupRouter(userHandler, statusHandler, pingHandler)
+	router := httpInfra.SetupRouter(userHandler, statusHandler, pingHandler, welcomeHanlder)
 
 	// 6️⃣ INICIAR SERVIDOR HTTP
 	log.Printf("🚀 Servidor iniciado en http://localhost:%s", cfg.ServerPort)

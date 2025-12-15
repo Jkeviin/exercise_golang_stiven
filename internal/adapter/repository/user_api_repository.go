@@ -27,6 +27,13 @@ func (r *UserAPIRepository) FindByID(id int) (*user.User, error) {
 		return nil, fmt.Errorf("error al consultar API: %w", err)
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusInternalServerError {
+		return nil, fmt.Errorf("el servidor externo no está disponible")
+	}
+
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, fmt.Errorf("Usuario no encontrado")
+	}
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("API respondió con código: %d", resp.StatusCode)
@@ -40,3 +47,16 @@ func (r *UserAPIRepository) FindByID(id int) (*user.User, error) {
 	return &u, nil
 }
 
+func (r *UserAPIRepository) FindAll() (*user.Users, error) {
+	url := fmt.Sprintf("%s/users", r.baseURL)
+	resp, err := r.client.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("error al consultar API: %w", err)
+	}
+
+	var us user.Users
+	if err := json.NewDecoder(resp.Body).Decode(&us); err != nil {
+		return nil, fmt.Errorf("error al decodificar respuesta: %w", err)
+	}
+	return &us, nil
+}

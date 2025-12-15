@@ -10,12 +10,14 @@ import (
 )
 
 type UserHandler struct {
-	getUserUC *userUsecase.GetUserUsecase
+	getUserUC    *userUsecase.GetUserUsecase
+	getUserAllUc *userUsecase.GetUserAllUsecase
 }
 
-func NewUserHandler(getUserUC *userUsecase.GetUserUsecase) *UserHandler {
+func NewUserHandler(getUserUC *userUsecase.GetUserUsecase, getUserAllUc *userUsecase.GetUserAllUsecase) *UserHandler {
 	return &UserHandler{
-		getUserUC: getUserUC,
+		getUserUC:    getUserUC,
+		getUserAllUc: getUserAllUc,
 	}
 }
 
@@ -38,3 +40,13 @@ func (h *UserHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(user)
 }
 
+func (h *UserHandler) GetAll(w http.ResponseWriter, r *http.Request) {
+
+	users, err := h.getUserAllUc.Execute()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(users)
+}

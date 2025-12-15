@@ -19,8 +19,10 @@ func (uc *GetStatusUsecase) Execute() *status.Status {
 	uptime := time.Since(uc.startTime).Seconds()
 
 	return &status.Status{
-		Message: "La aplicación está funcionando correctamente",
-		Version: "1.1.0",
-		Uptime:  int64(uptime),
+		Message:     "La aplicación está funcionando correctamente",
+		Version:     "1.1.0",
+		Uptime:      int64(uptime),
+		Environment: "development",
+		Timestamp:   time.Now().Format(time.RFC3339),
 	}
 }

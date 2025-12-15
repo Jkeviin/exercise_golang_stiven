@@ -17,6 +17,7 @@ func SetupRouter(
 	userHandler *handler.UserHandler,
 	statusHandler *handler.StatusHandler,
 	pingHandler *handler.PingHandler,
+	welcomeHandler *handler.WelcomeHandler,
 ) *chi.Mux {
 	// Crear router chi
 	r := chi.NewRouter()
@@ -25,17 +26,17 @@ func SetupRouter(
 	r.Use(middleware.Logger)    // Log de cada request
 	r.Use(middleware.Recoverer) // Recuperación de panics
 	r.Use(middleware.RequestID) // ID único por request
-
 	// REGISTRAR RUTAS
 	// Cada ruta conecta un endpoint HTTP con un handler
 
 	// Health checks
 	r.Get("/status", statusHandler.Get) // Estado del servidor
 	r.Get("/ping", pingHandler.Ping)    // Verificación rápida
+	r.Get("/", welcomeHandler.Welcome)
 
 	// Rutas de negocio
 	r.Get("/users/{id}", userHandler.GetByID) // Obtener usuario por ID
-
+	r.Get("/users", userHandler.GetAll)       // Obetener usarios
 	return r
 }
 
