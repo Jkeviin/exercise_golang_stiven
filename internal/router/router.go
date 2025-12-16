@@ -18,6 +18,7 @@ func Setup(
 	pingHandler *handler.PingHandler,
 	welcomeHandler *handler.WelcomeHandler,
 	userNameHandler *handler.UserNameHandler,
+	userEmailHandler *handler.UserEmailHandler,
 ) *chi.Mux {
 	r := chi.NewRouter()
 
@@ -32,9 +33,10 @@ func Setup(
 	r.Get("/", welcomeHandler.Welcome)
 
 	// Rutas de usuarios
-	r.Get("/users", userHandler.GetAll)       // Listar usuarios
-	r.Get("/users/{id}", userHandler.GetByID) // Obtener usuario por ID
-	r.Get("/users/{id}/name", userNameHandler.GetByID)
+	r.Get("/users", userHandler.GetAll)                // Listar usuarios
+	r.Get("/users/{id}", userHandler.GetByID)          // Obtener usuario por ID
+	r.Get("/users/{id}/name", userNameHandler.GetByID) // obtener nombre por id
+	r.Get("/users/{id}/email", userEmailHandler.GetByID)
 	return r
 }
 
