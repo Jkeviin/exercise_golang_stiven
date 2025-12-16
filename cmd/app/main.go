@@ -31,9 +31,10 @@ func main() {
 	statusHandler := handler.NewStatusHandler(getStatusUsecase)
 	pingHandler := handler.NewPingHandler(pingUsecase)
 	welcomeHandler := handler.NewWelcomeHandler(welcomeUsecase)
+	userNameHanlder := handler.NewUserNameHandler(getUserUsecase)
 
 	// 5️⃣ CONFIGURAR ROUTER
-	r := router.Setup(userHandler, statusHandler, pingHandler, welcomeHandler)
+	r := router.Setup(userHandler, statusHandler, pingHandler, welcomeHandler, userNameHanlder)
 
 	// 6️⃣ INICIAR SERVIDOR
 	log.Printf("🚀 Servidor iniciado en http://localhost:%s", cfg.ServerPort)

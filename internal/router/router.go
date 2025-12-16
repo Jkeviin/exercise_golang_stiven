@@ -17,6 +17,7 @@ func Setup(
 	statusHandler *handler.StatusHandler,
 	pingHandler *handler.PingHandler,
 	welcomeHandler *handler.WelcomeHandler,
+	userNameHandler *handler.UserNameHandler,
 ) *chi.Mux {
 	r := chi.NewRouter()
 
@@ -33,7 +34,7 @@ func Setup(
 	// Rutas de usuarios
 	r.Get("/users", userHandler.GetAll)       // Listar usuarios
 	r.Get("/users/{id}", userHandler.GetByID) // Obtener usuario por ID
-
+	r.Get("/users/{id}/name", userNameHandler.GetByID)
 	return r
 }
 
@@ -42,4 +43,3 @@ func Start(cfg *config.Config, router *chi.Mux) error {
 	addr := fmt.Sprintf(":%s", cfg.ServerPort)
 	return http.ListenAndServe(addr, router)
 }
-
